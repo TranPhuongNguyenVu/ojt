@@ -46,7 +46,7 @@ public class AuthController {
                 .secure(true)         // Bắt buộc khi SameSite=None; trình duyệt vẫn coi http://localhost là secure context nên vẫn chạy local bình thường
                 .path("/")            // Áp dụng cho mọi API
                 .maxAge(24 * 60 * 60) // Tồn tại 1 ngày
-                .sameSite("None")     // FE/BE khác domain (vd. 2 tunnel ngrok) -> Lax sẽ bị trình duyệt chặn không gửi cookie
+                .sameSite("None")     // FE/BE khác domain -> Lax sẽ bị trình duyệt chặn không gửi cookie
                 .build();
         // 2. Giữ token trong body để Swagger/curl test; FE vẫn dùng cookie
         // 3. Kẹp Cookie vào Header trả về

@@ -29,8 +29,13 @@ const SeatGrid = ({
   showPrices = false,
   currentAccountId = null,
   tabHeldSeatIds = null,
+  readOnly = false,
+  compact = false,
 }) => {
-  const cellHeightClass = showPrices ? "h-14" : "h-9";
+  const cellHeightClass = compact ? "h-6" : showPrices ? "h-14" : "h-9";
+  const cellSizePx = compact ? 26 : 40;
+  const gapPx = compact ? 4 : 8;
+  const gapClass = compact ? "gap-1" : "gap-2";
   const [isDragging, setIsDragging] = useState(false);
   const [dragMode, setDragMode] = useState("select");
 
@@ -97,18 +102,23 @@ const SeatGrid = ({
   };
 
   const renderSeat = (seat, rowSeats) => {
-    const isSelected = selectedSeats.some((s) => s.seatId === seat.seatId);
     const isCouple = seat.seatType === 2;
+    const partner = (isCouple && seat.pairSeatId) ? rowSeats.find((x) => x.seatId === seat.pairSeatId) : null;
+
+    const isSelected = selectedSeats.some((s) => s.seatId === seat.seatId || (partner && s.seatId === partner.seatId));
     const isAisle = isAisleSeat(seat);
-    const isInactive = isInactiveSeat(seat);
-    const isBooked = seat.bookingStatus === 1;
-    const isOwnDraft =
-      tabHeldSeatIds != null
-        ? seat.bookingStatus === 2 && tabHeldSeatIds.has(Number(seat.seatId))
-        : seat.bookingStatus === 2 &&
-          !!currentAccountId &&
-          seat.reservedBy === currentAccountId;
-    const isDraftHeldByOther = seat.bookingStatus === 2 && !isOwnDraft;
+    const isInactive = isInactiveSeat(seat) || (partner && isInactiveSeat(partner));
+    const isBooked = seat.bookingStatus === 1 || (partner && partner.bookingStatus === 1);
+    
+    const isOwnDraft = partner
+      ? (tabHeldSeatIds != null
+          ? (seat.bookingStatus === 2 && tabHeldSeatIds.has(Number(seat.seatId))) || (partner.bookingStatus === 2 && tabHeldSeatIds.has(Number(partner.seatId)))
+          : (seat.bookingStatus === 2 && !!currentAccountId && seat.reservedBy === currentAccountId) || (partner.bookingStatus === 2 && !!currentAccountId && partner.reservedBy === currentAccountId))
+      : (tabHeldSeatIds != null
+          ? seat.bookingStatus === 2 && tabHeldSeatIds.has(Number(seat.seatId))
+          : seat.bookingStatus === 2 && !!currentAccountId && seat.reservedBy === currentAccountId);
+
+    const isDraftHeldByOther = (seat.bookingStatus === 2 && !isOwnDraft) || (partner && partner.bookingStatus === 2 && !isOwnDraft);
 
     if (isAisle) {
       if (isAdmin) {
@@ -134,26 +144,28 @@ const SeatGrid = ({
     const colNum = getColumnIndex(seat.seatColumn) + 1;
     let content = String(colNum);
     let spanStyle = {};
+    let partnerColNum = null;
 
     if (isCouple && seat.pairSeatId) {
-      const partner = rowSeats.find((x) => x.seatId === seat.pairSeatId);
+      spanStyle = { gridColumn: "span 2" };
       if (partner) {
-        spanStyle = { gridColumn: "span 2" };
-        const partnerColNum = getColumnIndex(partner.seatColumn) + 1;
+        partnerColNum = getColumnIndex(partner.seatColumn) + 1;
         content = `${colNum}-${partnerColNum}`;
+      } else {
+        content = `${colNum}`;
       }
     }
 
     if (isSelected || isOwnDraft) {
       seatClass = "bg-sky-500 text-white font-black shadow-lg border-2 border-sky-600";
     } else if (isBooked) {
-      seatClass = "bg-slate-500 text-white cursor-not-allowed line-through";
+      seatClass = "bg-slate-500 text-white cursor-not-allowed";
     } else if (isDraftHeldByOther) {
       seatClass = "bg-amber-400 text-amber-950 cursor-not-allowed border border-amber-500";
     } else if (isInactive) {
-      seatClass = "bg-slate-300 dark:bg-gray-700 text-slate-600 dark:text-gray-400 border border-slate-400 dark:border-gray-600 line-through cursor-not-allowed";
+      seatClass = "bg-slate-300 dark:bg-gray-900 text-slate-600 dark:text-gray-600 border border-slate-400 dark:border-gray-700 line-through cursor-not-allowed";
       if (isAdmin) {
-        seatClass = "bg-slate-200 dark:bg-gray-700 text-slate-500 dark:text-gray-400 border border-slate-400 dark:border-gray-600 line-through hover:bg-slate-300 dark:hover:bg-gray-600";
+        seatClass = "bg-slate-300 dark:bg-gray-900 text-slate-500 dark:text-gray-600 border border-slate-400 dark:border-gray-700 line-through hover:bg-slate-400 dark:hover:bg-gray-800";
       }
     } else if (seat.seatType === 1) {
       seatClass = "bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-500 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/60 font-bold";
@@ -163,7 +175,7 @@ const SeatGrid = ({
       seatClass = "bg-slate-100 dark:bg-gray-700 hover:bg-slate-200 dark:hover:bg-gray-600 text-slate-700 dark:text-gray-200 border border-slate-300 dark:border-gray-600";
     }
 
-    const disabledState = !isAdmin && (isBooked || isDraftHeldByOther || isInactive);
+    const disabledState = readOnly || (!isAdmin && (isBooked || isDraftHeldByOther || isInactive));
     const priceLabel = showPrices ? seat.priceLabel : null;
 
     return (
@@ -175,9 +187,19 @@ const SeatGrid = ({
         onMouseDown={(e) => handleMouseDown(seat, e)}
         onMouseEnter={() => handleMouseEnter(seat)}
         title={priceLabel ? `Giá: ${priceLabel}` : undefined}
-        className={`${cellHeightClass} w-full rounded text-[10px] font-bold flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${seatClass}`}
+        className={`${cellHeightClass} w-full rounded text-[10px] font-bold flex flex-col items-center justify-center gap-0.5 transition-all ${readOnly ? "cursor-default pointer-events-none" : "cursor-pointer"} ${seatClass}`}
       >
-        <span>{content}</span>
+        <span>
+          {isBooked && partnerColNum != null ? (
+            <>
+              <span className="line-through">{colNum}</span>-<span className="line-through">{partnerColNum}</span>
+            </>
+          ) : isBooked ? (
+            <span className="line-through">{content}</span>
+          ) : (
+            content
+          )}
+        </span>
         {priceLabel && <span className="text-[9px] font-semibold opacity-75">{priceLabel}</span>}
       </button>
     );
@@ -238,17 +260,23 @@ const SeatGrid = ({
       <span className="w-6 text-xs font-black text-slate-400 dark:text-gray-500 text-center">{rowLetter}</span>
     );
 
+  const gridWidthPx = compact
+    ? totalColumns * cellSizePx + (totalColumns - 1) * gapPx
+    : totalColumns * cellSizePx;
+
   return (
-    <div className="overflow-x-auto py-6 flex justify-center select-none">
-      <div className="inline-block space-y-3 min-w-[640px]">
+    <div className={`overflow-x-auto ${compact ? "py-2" : "py-6"} flex justify-center select-none`}>
+      <div className={`inline-block space-y-3 ${compact ? "" : "min-w-[640px]"}`}>
         {onSelectColumn && (
           <div className="flex items-center gap-3">
             <span className="w-6" />
             <div
-              className="flex-1 grid gap-2"
+              className={compact ? `grid ${gapClass}` : `flex-1 grid ${gapClass}`}
               style={{
-                gridTemplateColumns: `repeat(${totalColumns}, minmax(0, 1fr))`,
-                width: `${totalColumns * 40}px`,
+                gridTemplateColumns: compact
+                  ? `repeat(${totalColumns}, ${cellSizePx}px)`
+                  : `repeat(${totalColumns}, minmax(0, 1fr))`,
+                width: `${gridWidthPx}px`,
               }}
             >
               {columnValues.map((colValue, idx) => (
@@ -275,10 +303,12 @@ const SeatGrid = ({
               <RowLabel rowLetter={rowLetter} rowNum={rowNum} />
 
               <div
-                className="flex-1 grid gap-2"
+                className={compact ? `grid ${gapClass}` : `flex-1 grid ${gapClass}`}
                 style={{
-                  gridTemplateColumns: `repeat(${totalColumns}, minmax(0, 1fr))`,
-                  width: `${totalColumns * 40}px`,
+                  gridTemplateColumns: compact
+                    ? `repeat(${totalColumns}, ${cellSizePx}px)`
+                    : `repeat(${totalColumns}, minmax(0, 1fr))`,
+                  width: `${gridWidthPx}px`,
                 }}
               >
                 {buildRowElements(rowSeats)}

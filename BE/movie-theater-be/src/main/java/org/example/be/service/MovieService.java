@@ -4,7 +4,6 @@ import org.example.be.dto.MovieDTO;
 import org.example.be.dto.MovieRequestDTO;
 import org.example.be.entity.Movie;
 import org.example.be.enums.MovieStatus;
-import org.example.be.entity.Schedule;
 import org.example.be.mapper.MovieMapper;
 import org.example.be.repository.MovieRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -16,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 @Service
 public class MovieService {
     private static final Set<MovieStatus> CUSTOMER_HIDDEN_STATUSES =
-            EnumSet.of(MovieStatus.INACTIVE, MovieStatus.DELETED);
+            EnumSet.of(MovieStatus.UNSCHEDULED, MovieStatus.INACTIVE);
 
     @Autowired
     private MovieRepository movieRepository;
@@ -39,23 +39,29 @@ public class MovieService {
     @Autowired
     private MovieMapper movieMapper;
     @Autowired
-    private ScheduleService scheduleService;
-    @Autowired
     private MovieStatusResolver movieStatusResolver;
 
     @Transactional(readOnly = true)
     public List<MovieDTO> getMovies(boolean isAdmin) {
         List<Movie> movies = isAdmin
                 ? movieRepository.findAll()
-                : movieRepository.findByStatusIsNullOrStatusNot(MovieStatus.DELETED);
+                : movieRepository.findByStatusIsNullOrStatusNot(MovieStatus.INACTIVE);
         return filterForAudience(mapWithStatus(movies), isAdmin);
+    }
+
+    /** Movies eligible to be picked when creating a showtime — excludes UNSCHEDULED/INACTIVE regardless of caller role. */
+    @Transactional(readOnly = true)
+    public List<MovieDTO> getSchedulableMovies() {
+        return mapWithStatus(movieRepository.findAll()).stream()
+                .filter(dto -> !CUSTOMER_HIDDEN_STATUSES.contains(MovieStatus.valueOf(dto.getStatus())))
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<MovieDTO> searchMovies(String keyword, boolean isAdmin) {
         List<Movie> base = isAdmin
                 ? movieRepository.findAll()
-                : movieRepository.findByStatusIsNullOrStatusNot(MovieStatus.DELETED);
+                : movieRepository.findByStatusIsNullOrStatusNot(MovieStatus.INACTIVE);
         String needle = TextNormalizeUtil.stripDiacritics(keyword).toLowerCase();
         List<Movie> matched = base.stream()
                 .filter(m -> TextNormalizeUtil.stripDiacritics(m.getMovieNameVn()).toLowerCase().contains(needle)
@@ -80,7 +86,7 @@ public class MovieService {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Movie not found"));
 
-        if (scheduleRepository.existsByMovieId(id)) {
+        if (scheduleRepository.existsUpcomingByMovieId(id, LocalDateTime.now())) {
             throw new IllegalStateException("Không thể cập nhật phim đang có lịch chiếu.");
         }
 
@@ -103,37 +109,40 @@ public class MovieService {
         return toDtoWithStatus(movieRepository.save(movie));
     }
 
-    /** Restores a soft-deleted movie; status được tính lại ngay theo fromDate/toDate và ghi vào DB. */
+    /** Restores a deactivated movie; status được tính lại ngay theo fromDate/toDate và ghi vào DB. */
     @Transactional
     public MovieDTO activateMovie(String id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Movie not found"));
-        if (movie.getStatus() != MovieStatus.DELETED) {
-            throw new IllegalStateException("Phim chưa bị xóa.");
+        if (movie.getStatus() != MovieStatus.INACTIVE) {
+            throw new IllegalStateException("Phim chưa bị ngừng hoạt động.");
         }
         movie.setStatus(null);
         movie.setStatus(movieStatusResolver.resolve(movie));
         return toDtoWithStatus(movieRepository.save(movie));
     }
 
+    /**
+     * Deactivating a movie is only allowed if it has NEVER had a schedule created for it (any
+     * status, including past/ended/cancelled ones) — once a movie has been scheduled, its
+     * history must be preserved, so it can only be turned UNSCHEDULED (via {@link #updateMovie}),
+     * never INACTIVE.
+     */
     @Transactional
     public MovieDTO deleteMovie(String id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Movie not found"));
 
-        if (movie.getStatus() == MovieStatus.DELETED) {
-            throw new IllegalStateException("Phim đã được xóa trước đó.");
+        if (movie.getStatus() == MovieStatus.INACTIVE) {
+            throw new IllegalStateException("Phim đã ngừng hoạt động trước đó.");
         }
 
-        List<Schedule> blocking = scheduleRepository.findActiveByMovieId(id).stream()
-                .filter(s -> !scheduleService.canCancelOrDelete(s))
-                .collect(Collectors.toList());
-        if (!blocking.isEmpty()) {
+        if (scheduleRepository.existsAnyByMovieId(id)) {
             throw new IllegalStateException(
-                    "Không thể xóa phim: còn suất chiếu trong vòng 2 ngày tới chưa thể hủy.");
+                    "Không thể ngừng hoạt động phim đã từng có xuất chiếu. Vui lòng cập nhật phim để gỡ lịch chiếu (chuyển sang chưa có lịch chiếu) thay vì thao tác này.");
         }
 
-        movie.setStatus(MovieStatus.DELETED);
+        movie.setStatus(MovieStatus.INACTIVE);
         return toDtoWithStatus(movieRepository.save(movie));
     }
 

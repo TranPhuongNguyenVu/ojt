@@ -36,7 +36,7 @@ public class EmployeeController {
      * AC-01, AC-04, AC-05: Danh sách nhân viên + tìm kiếm (keyword tối đa 28 ký tự).
      * AC-06: Chỉ Admin.
      */
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     @GetMapping
     public ResponseEntity<ApiResponse<List<EmployeeDTO>>> listEmployees(
             @RequestParam(required = false)
@@ -49,7 +49,7 @@ public class EmployeeController {
         return ResponseEntity.ok(ApiResponse.success(message, employees));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     @GetMapping("/{employeeId}")
     public ResponseEntity<ApiResponse<EmployeeDTO>> getEmployee(@PathVariable String employeeId) {
         EmployeeDTO employee = employeeService.getEmployeeById(employeeId);
@@ -57,7 +57,7 @@ public class EmployeeController {
     }
 
     /** AC-03: Thêm nhân viên. AC-06: Chỉ Admin. */
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     @PostMapping
     public ResponseEntity<ApiResponse<EmployeeDTO>> createEmployee(
             @Valid @RequestBody CreateEmployeeRequest request) {
@@ -65,7 +65,7 @@ public class EmployeeController {
         return ResponseEntity.ok(ApiResponse.success("Thêm nhân viên thành công.", created));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     @PutMapping("/{employeeId}")
     public ResponseEntity<ApiResponse<EmployeeDTO>> updateEmployee(
             @PathVariable String employeeId,
@@ -74,7 +74,7 @@ public class EmployeeController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật nhân viên thành công.", updated));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     @PostMapping("/{employeeId}/reset-password")
     public ResponseEntity<ApiResponse<Void>> resetPassword(@PathVariable String employeeId) {
         employeeService.resetPassword(employeeId);
@@ -85,7 +85,7 @@ public class EmployeeController {
     /**
      * Vô hiệu hóa — giữ record trong DB, account.status = 2, không cho đăng nhập.
      */
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     @PatchMapping("/{employeeId}/deactivate")
     public ResponseEntity<ApiResponse<EmployeeDTO>> deactivateEmployee(@PathVariable String employeeId) {
         EmployeeDTO deactivated = employeeService.deactivateEmployee(employeeId);
@@ -95,7 +95,7 @@ public class EmployeeController {
     /**
      * Khôi phục — đưa account.status từ 2 về 1, cho phép đăng nhập lại.
      */
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     @PatchMapping("/{employeeId}/restore")
     public ResponseEntity<ApiResponse<EmployeeDTO>> restoreEmployee(@PathVariable String employeeId) {
         EmployeeDTO restored = employeeService.restoreEmployee(employeeId);
@@ -105,7 +105,7 @@ public class EmployeeController {
     /**
      * Xóa vĩnh viễn — xóa cả EMPLOYEE và ACCOUNT khỏi DB.
      */
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     @DeleteMapping("/{employeeId}")
     public ResponseEntity<ApiResponse<Void>> deleteEmployee(@PathVariable String employeeId) {
         employeeService.deleteEmployee(employeeId);

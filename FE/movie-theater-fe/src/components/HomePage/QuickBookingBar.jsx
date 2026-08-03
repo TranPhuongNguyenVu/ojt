@@ -16,11 +16,15 @@ const QuickBookingBar = () => {
   
   const [errors, setErrors] = useState({ movie: '', date: '', time: '' });
 
-  // Lấy danh sách phim đang khả dụng
+  // Lấy danh sách phim đang khả dụng. Ẩn UNSCHEDULED/INACTIVE/ENDED để không cho đặt vé
+  // cho phim chưa lên lịch/đã ngừng hoạt động/đã kết thúc chiếu, kể cả khi API trả về danh sách chưa lọc.
   useEffect(() => {
     MovieService.getAllMovies()
       .then((res) => {
-        setMovies(res.data.data || []);
+        const list = (res.data.data || []).filter(
+          (m) => m.status !== 'UNSCHEDULED' && m.status !== 'INACTIVE' && m.status !== 'ENDED'
+        );
+        setMovies(list);
       })
       .catch((err) => console.error("Lỗi tải danh sách phim:", err));
   }, []);

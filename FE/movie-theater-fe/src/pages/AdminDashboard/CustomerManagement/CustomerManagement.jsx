@@ -411,16 +411,16 @@ const CustomerManagement = () => {
     }
   };
 
-  // Xóa vĩnh viễn khách hàng
+  // Xóa mềm khách hàng
   const handleDelete = async (memberId, username) => {
-    if (window.confirm(`CẢNH BÀO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN tài khoản của ${username}? Thao tác này không thể hoàn tác!`)) {
+    if (window.confirm(`Bạn có chắc chắn muốn XÓA MỀM tài khoản của ${username}? Tài khoản sẽ chuyển sang trạng thái đã xóa mềm và không thể đăng nhập.`)) {
       try {
         await CustomerService.deleteCustomer(memberId);
-        alert(`Đã xóa vĩnh viễn tài khoản ${username} thành công!`);
+        alert(`Đã xóa mềm tài khoản ${username} thành công!`);
         fetchCustomers();
       } catch (error) {
-        console.error("Lỗi khi xóa tài khoản:", error);
-        alert(error.response?.data?.message || "Lỗi khi xóa tài khoản!");
+        console.error("Lỗi khi xóa mềm tài khoản:", error);
+        alert(error.response?.data?.message || "Lỗi khi xóa mềm tài khoản!");
       }
     }
   };
@@ -452,21 +452,21 @@ const CustomerManagement = () => {
   }, [currentPage, totalPages]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gray-50 font-sans -m-8 md:-m-10">
-      
+    <div className="flex-1 flex flex-col h-full bg-gray-50 dark:bg-gray-950 font-sans -m-8 md:-m-10 transition-colors duration-300">
+
       {/* Header của phần Quản lý */}
-      <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
-        <h2 className="text-xl font-bold text-gray-800">Quản lý Khách hàng (Members)</h2>
+      <header className="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-8">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Quản lý Khách hàng (Members)</h2>
         <div className="flex items-center space-x-4">
           <div className="relative">
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm tài khoản..." 
+            <input
+              type="text"
+              placeholder="Tìm kiếm tài khoản..."
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
-              className="bg-gray-100 text-sm rounded-full pl-10 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-gray-300 w-64 transition-all" 
+              className="bg-gray-100 dark:bg-gray-800/60 dark:text-white text-sm rounded-full pl-10 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600 w-64 transition-all"
             />
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           </div>
           <button 
             type="button"
@@ -481,11 +481,11 @@ const CustomerManagement = () => {
 
       {/* Nội dung Bảng */}
       <main className="flex-1 overflow-y-auto p-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 font-bold">
+              <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400 font-bold">
                 <th className="px-6 py-4">Tài khoản</th>
                 <th className="px-6 py-4">Ảnh đại diện</th>
                 <th className="px-6 py-4">Họ và tên</th>
@@ -495,12 +495,12 @@ const CustomerManagement = () => {
                 <th className="px-6 py-4 text-center">Thao tác</th>
               </tr>
             </thead>
-            
-            <tbody className="divide-y divide-gray-100">
+
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {isLoading ? (
                 // Đang tải dữ liệu
                 <tr>
-                  <td colSpan="7" className="px-6 py-10 text-center text-sm text-gray-500">Đang tải dữ liệu, vui lòng chờ...</td>
+                  <td colSpan="7" className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">Đang tải dữ liệu, vui lòng chờ...</td>
                 </tr>
               ) : filteredCustomers.length === 0 ? (
                 // Báo rỗng hoặc báo không tìm thấy từ khóa
@@ -512,12 +512,12 @@ const CustomerManagement = () => {
               ) : (
                 // Render danh sách (AC-01)
                 paginatedCustomers.map((user, index) => (
-                  <tr key={index} className="hover:bg-gray-50 transition-colors">
+                  <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900 text-sm">{user.username}</div>
+                      <div className="font-bold text-gray-900 dark:text-white text-sm">{user.username}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="h-10 w-10 rounded-full bg-gray-200 border border-gray-300 overflow-hidden flex items-center justify-center text-gray-600 font-bold text-sm">
+                      <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 overflow-hidden flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold text-sm">
                         {user.image ? (
                           <img src={user.image} alt={user.fullName} className="h-full w-full object-cover" />
                         ) : (
@@ -525,50 +525,50 @@ const CustomerManagement = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-700">{user.fullName || "Chưa cập nhật"}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{user.email || "N/A"}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{user.phoneNumber || "N/A"}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-700 dark:text-gray-300">{user.fullName || "Chưa cập nhật"}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{user.email || "N/A"}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{user.phoneNumber || "N/A"}</td>
                     <td className="px-6 py-4">
-                      {user.status === 1 
-                        ? <span className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-green-700 bg-green-100 rounded-full">Active</span>
-                        : user.status === 2 
-                        ? <span className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-red-700 bg-red-100 rounded-full">Locked</span>
-                        : <span className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-yellow-700 bg-yellow-100 rounded-full">Unverified</span>
+                      {user.status === 1
+                        ? <span className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-950/40 rounded-full">Active</span>
+                        : user.status === 2
+                        ? <span className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/40 rounded-full">Locked</span>
+                        : <span className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-950/40 rounded-full">Unverified</span>
                       }
                     </td>
                     <td className="px-6 py-4 flex justify-center space-x-3">
                       {/* Xem chi tiết */}
-                      <button 
+                      <button
                         onClick={() => { setSelectedCustomer(user); setIsDetailModalOpen(true); }}
-                        className="text-gray-500 hover:text-gray-700 p-1.5 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors" 
+                        className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1.5 bg-gray-50 dark:bg-gray-800/60 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
                         title="Xem chi tiết"
                       >
                         <Eye size={16} />
                       </button>
 
                       {/* AC-04: Nút Edit */}
-                      <button 
-                        onClick={() => handleOpenEditModal(user)} 
-                        className="text-blue-500 hover:text-blue-700 p-1.5 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors" 
+                      <button
+                        onClick={() => handleOpenEditModal(user)}
+                        className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 p-1.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-md transition-colors"
                         title="Chỉnh sửa"
                       >
                         <Edit size={16} />
                       </button>
-                      
+
                       {/* Nút Khóa / Mở khóa động */}
                       {user.status === 1 && (
-                        <button 
+                        <button
                           onClick={() => handleLock(user.memberId, user.username)}
-                          className="text-amber-500 hover:text-amber-700 p-1.5 bg-amber-50 hover:bg-amber-100 rounded-md transition-colors" 
+                          className="text-amber-500 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 p-1.5 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded-md transition-colors"
                           title="Khóa tài khoản"
                         >
                           <Lock size={16} />
                         </button>
                       )}
                       {user.status === 2 && (
-                        <button 
+                        <button
                           onClick={() => handleUnlock(user.memberId, user.username)}
-                          className="text-green-500 hover:text-green-700 p-1.5 bg-green-50 hover:bg-green-100 rounded-md transition-colors" 
+                          className="text-green-500 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 p-1.5 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-md transition-colors"
                           title="Mở khóa tài khoản"
                         >
                           <Unlock size={16} />
@@ -576,9 +576,9 @@ const CustomerManagement = () => {
                       )}
 
                       {/* Nút Xóa vĩnh viễn */}
-                      <button 
+                      <button
                         onClick={() => handleDelete(user.memberId, user.username)}
-                        className="text-red-500 hover:text-red-700 p-1.5 bg-red-50 hover:bg-red-100 rounded-md transition-colors" 
+                        className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1.5 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-md transition-colors"
                         title="Xóa vĩnh viễn"
                       >
                         <Trash2 size={16} />
@@ -607,12 +607,12 @@ const CustomerManagement = () => {
       {/* Modal Chi tiết Khách hàng (Detail Modal) */}
       {isDetailModalOpen && selectedCustomer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden transition-all transform scale-100">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 max-w-md w-full overflow-hidden transition-all transform scale-100">
             {/* Header Modal */}
-            <div className="bg-gray-950 text-white px-6 py-4 flex items-center justify-between">
+            <div className="bg-gray-950 dark:bg-black text-white px-6 py-4 flex items-center justify-between">
               <h3 className="text-lg font-bold">Chi tiết khách hàng thành viên</h3>
-              <button 
-                onClick={() => setIsDetailModalOpen(false)} 
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 <X size={20} />
@@ -623,7 +623,7 @@ const CustomerManagement = () => {
             <div className="p-6 space-y-6">
               {/* Profile Image & Basic Info */}
               <div className="flex items-center space-x-4">
-                <div className="h-16 w-16 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center text-gray-400 font-bold text-xl">
+                <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden flex items-center justify-center text-gray-400 dark:text-gray-500 font-bold text-xl">
                   {selectedCustomer.image ? (
                     <img src={selectedCustomer.image} alt={selectedCustomer.fullName} className="h-full w-full object-cover" />
                   ) : (
@@ -631,34 +631,34 @@ const CustomerManagement = () => {
                   )}
                 </div>
                 <div>
-                  <h4 className="font-bold text-gray-900 text-lg">{selectedCustomer.fullName || "Chưa cập nhật"}</h4>
-                  <p className="text-sm text-gray-500 font-medium">{selectedCustomer.username}</p>
+                  <h4 className="font-bold text-gray-900 dark:text-white text-lg">{selectedCustomer.fullName || "Chưa cập nhật"}</h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{selectedCustomer.username}</p>
                 </div>
               </div>
 
               {/* Chi tiết thông tin */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">Email</span>
-                  <p className="font-semibold text-gray-700 mt-0.5 break-all">{selectedCustomer.email || "N/A"}</p>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold tracking-wider">Email</span>
+                  <p className="font-semibold text-gray-700 dark:text-gray-300 mt-0.5 break-all">{selectedCustomer.email || "N/A"}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">Số điện thoại</span>
-                  <p className="font-semibold text-gray-700 mt-0.5">{selectedCustomer.phoneNumber || "N/A"}</p>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold tracking-wider">Số điện thoại</span>
+                  <p className="font-semibold text-gray-700 dark:text-gray-300 mt-0.5">{selectedCustomer.phoneNumber || "N/A"}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">CMND / CCCD</span>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold tracking-wider">CMND / CCCD</span>
                   <div className="flex items-center space-x-2 mt-0.5">
-                    <p className="font-semibold text-gray-700">
+                    <p className="font-semibold text-gray-700 dark:text-gray-300">
                       {selectedCustomer.identityCard
                         ? (showIdentityCard ? selectedCustomer.identityCard : maskIdentityCard(selectedCustomer.identityCard))
                         : "N/A"}
                     </p>
                     {selectedCustomer.identityCard && (
-                      <button 
-                        type="button" 
-                        onClick={() => setShowIdentityCard(!showIdentityCard)} 
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                      <button
+                        type="button"
+                        onClick={() => setShowIdentityCard(!showIdentityCard)}
+                        className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                         title={showIdentityCard ? "Ẩn số CCCD" : "Hiển thị số CCCD"}
                       >
                         {showIdentityCard ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -667,36 +667,36 @@ const CustomerManagement = () => {
                   </div>
                 </div>
                 <div>
-                  <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">Ngày sinh</span>
-                  <p className="font-semibold text-gray-700 mt-0.5">{selectedCustomer.dateOfBirth || "N/A"}</p>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold tracking-wider">Ngày sinh</span>
+                  <p className="font-semibold text-gray-700 dark:text-gray-300 mt-0.5">{selectedCustomer.dateOfBirth || "N/A"}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">Giới tính</span>
-                  <p className="font-semibold text-gray-700 mt-0.5">{selectedCustomer.gender || "Chưa cập nhật"}</p>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold tracking-wider">Giới tính</span>
+                  <p className="font-semibold text-gray-700 dark:text-gray-300 mt-0.5">{selectedCustomer.gender || "Chưa cập nhật"}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">Điểm tích lũy</span>
-                  <p className="font-semibold text-yellow-600 mt-0.5">{selectedCustomer.score || 0} điểm</p>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold tracking-wider">Điểm tích lũy</span>
+                  <p className="font-semibold text-yellow-600 dark:text-yellow-400 mt-0.5">{selectedCustomer.score || 0} điểm</p>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">Địa chỉ</span>
-                  <p className="font-semibold text-gray-700 mt-0.5">{selectedCustomer.address || "N/A"}</p>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold tracking-wider">Địa chỉ</span>
+                  <p className="font-semibold text-gray-700 dark:text-gray-300 mt-0.5">{selectedCustomer.address || "N/A"}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">Quyền (Role)</span>
-                  <p className="font-semibold text-gray-700 mt-0.5">
+                  <span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold tracking-wider">Quyền (Role)</span>
+                  <p className="font-semibold text-gray-700 dark:text-gray-300 mt-0.5">
                     {selectedCustomer.roleId === 2 ? "Member" : "Role " + (selectedCustomer.roleId || 2)}
                   </p>
                 </div>
                 <div>
-                  <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">Trạng thái</span>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold tracking-wider">Trạng thái</span>
                   <div className="mt-1">
                     {selectedCustomer.status === 1 ? (
-                      <span className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-green-700 bg-green-100 rounded-full">Active</span>
+                      <span className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-950/40 rounded-full">Active</span>
                     ) : selectedCustomer.status === 2 ? (
-                      <span className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-red-700 bg-red-100 rounded-full">Locked</span>
+                      <span className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/40 rounded-full">Locked</span>
                     ) : (
-                      <span className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-yellow-700 bg-yellow-100 rounded-full">Unverified</span>
+                      <span className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-950/40 rounded-full">Unverified</span>
                     )}
                   </div>
                 </div>
@@ -704,10 +704,10 @@ const CustomerManagement = () => {
             </div>
 
             {/* Footer Modal */}
-            <div className="bg-gray-50 px-6 py-4 flex justify-end">
-              <button 
-                onClick={() => setIsDetailModalOpen(false)} 
-                className="px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+            <div className="bg-gray-50 dark:bg-gray-800/60 px-6 py-4 flex justify-end">
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                className="px-4 py-2 bg-gray-900 dark:bg-gray-700 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors"
               >
                 Đóng
               </button>
@@ -719,7 +719,7 @@ const CustomerManagement = () => {
       {/* Modal Chỉnh sửa Khách hàng (Edit Modal) */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-3xl w-full overflow-hidden my-8">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 max-w-3xl w-full overflow-hidden my-8">
             {/* Header Modal */}
             <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
               <h3 className="text-lg font-bold">Chỉnh sửa thông tin thành viên</h3>
@@ -739,29 +739,29 @@ const CustomerManagement = () => {
                   
                   {/* Tên tài khoản (Read-only) */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       Tên đăng nhập
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                         <User size={16} />
                       </span>
-                      <input 
-                        type="text" 
-                        value={editForm.username} 
-                        disabled 
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+                      <input
+                        type="text"
+                        value={editForm.username}
+                        disabled
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-800 pl-10 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-800/60 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                       />
                     </div>
                   </div>
 
                   {/* Số điện thoại */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       Số điện thoại <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                         <Phone size={16} />
                       </span>
                       <input 
@@ -773,7 +773,7 @@ const CustomerManagement = () => {
                           setEditForm({ ...editForm, phoneNumber: e.target.value });
                           setErrors((prev) => ({ ...prev, phoneNumber: "" }));
                         }}
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
                       />
                     </div>
                     {errors.phoneNumber && <span className="text-[#C00000] text-xs font-semibold mt-1 block">{errors.phoneNumber}</span>}
@@ -781,11 +781,11 @@ const CustomerManagement = () => {
 
                   {/* Họ và Tên */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       Họ và Tên <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                         <User size={16} />
                       </span>
                       <input 
@@ -797,7 +797,7 @@ const CustomerManagement = () => {
                           setEditForm({ ...editForm, fullName: e.target.value });
                           setErrors((prev) => ({ ...prev, fullName: "" }));
                         }}
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
                       />
                     </div>
                     {errors.fullName && <span className="text-[#C00000] text-xs font-semibold mt-1 block">{errors.fullName}</span>}
@@ -805,11 +805,11 @@ const CustomerManagement = () => {
 
                   {/* CMND/CCCD */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       CMND / CCCD <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                         <CreditCard size={16} />
                       </span>
                       <input 
@@ -821,7 +821,7 @@ const CustomerManagement = () => {
                           setEditForm({ ...editForm, identityCard: e.target.value });
                           setErrors((prev) => ({ ...prev, identityCard: "" }));
                         }}
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
                       />
                     </div>
                     {errors.identityCard && <span className="text-[#C00000] text-xs font-semibold mt-1 block">{errors.identityCard}</span>}
@@ -829,11 +829,11 @@ const CustomerManagement = () => {
 
                   {/* Email */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       Email <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                         <Mail size={16} />
                       </span>
                       <input 
@@ -845,7 +845,7 @@ const CustomerManagement = () => {
                           setEditForm({ ...editForm, email: e.target.value });
                           setErrors((prev) => ({ ...prev, email: "" }));
                         }}
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
                       />
                     </div>
                     {errors.email && <span className="text-[#C00000] text-xs font-semibold mt-1 block">{errors.email}</span>}
@@ -853,11 +853,11 @@ const CustomerManagement = () => {
 
                   {/* Ngày sinh */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       Ngày sinh <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                         <Calendar size={16} />
                       </span>
                       <input 
@@ -868,7 +868,7 @@ const CustomerManagement = () => {
                           setEditForm({ ...editForm, dateOfBirth: e.target.value });
                           setErrors((prev) => ({ ...prev, dateOfBirth: "" }));
                         }}
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
                       />
                     </div>
                     {errors.dateOfBirth && <span className="text-[#C00000] text-xs font-semibold mt-1 block">{errors.dateOfBirth}</span>}
@@ -877,11 +877,11 @@ const CustomerManagement = () => {
 
                   {/* Giới tính */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       Giới tính <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none">
                         <User size={16} />
                       </span>
                       <select 
@@ -891,7 +891,7 @@ const CustomerManagement = () => {
                           setEditForm({ ...editForm, gender: e.target.value });
                           setErrors((prev) => ({ ...prev, gender: "" }));
                         }}
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm bg-white"
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm bg-white dark:bg-gray-800/60 dark:text-white"
                       >
                         <option value="">-- Chọn giới tính --</option>
                         <option value="Nam">Nam</option>
@@ -904,12 +904,12 @@ const CustomerManagement = () => {
 
                   {/* Phần Reset mật khẩu */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Mật khẩu</label>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Mật khẩu</label>
                     <div className="relative">
                       <button 
                         type="button"
                         onClick={() => handleResetPassword(editForm.memberId, editForm.username)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-[9px] bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border border-yellow-300 rounded-lg text-sm font-bold shadow-sm transition-colors"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-[9px] bg-yellow-50 dark:bg-yellow-950/40 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-500/30 rounded-lg text-sm font-bold shadow-sm transition-colors"
                         title="Đặt lại mật khẩu ngẫu nhiên mới và gửi email cho khách hàng"
                       >
                         <Key size={16} />
@@ -921,11 +921,11 @@ const CustomerManagement = () => {
                   <div className="md:col-span-2 space-y-4 text-left">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                       <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                           Tỉnh / Thành phố <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                             <MapPin size={16} />
                           </span>
                           <select
@@ -937,7 +937,7 @@ const CustomerManagement = () => {
                               setEditForm((prev) => applyAddressFieldChange(prev, name, value));
                               setErrors((prev) => ({ ...prev, province: '', district: '', detailAddress: '', address: '' }));
                             }}
-                            className="block w-full rounded-lg border border-gray-200 pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm bg-white"
+                            className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm bg-white dark:bg-gray-800/60 dark:text-white"
                           >
                             <option value="">Chọn Tỉnh/Thành...</option>
                             {Object.keys(locationData).map((item) => (
@@ -949,11 +949,11 @@ const CustomerManagement = () => {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                           Quận / Huyện <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                             <MapPin size={16} />
                           </span>
                           <select
@@ -966,7 +966,7 @@ const CustomerManagement = () => {
                               setErrors((prev) => ({ ...prev, [name]: '', address: '' }));
                             }}
                             disabled={!editForm.province}
-                            className="block w-full rounded-lg border border-gray-200 pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm bg-white disabled:bg-gray-50 disabled:cursor-not-allowed"
+                            className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm bg-white dark:bg-gray-800/60 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800/40 disabled:cursor-not-allowed"
                           >
                             <option value="">Chọn Quận/Huyện...</option>
                             {editForm.province && locationData[editForm.province]?.map((item) => (
@@ -979,11 +979,11 @@ const CustomerManagement = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                      <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                         Địa chỉ chi tiết <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                           <MapPin size={16} />
                         </span>
                         <input
@@ -997,7 +997,7 @@ const CustomerManagement = () => {
                             setEditForm((prev) => applyAddressFieldChange(prev, name, value));
                             setErrors((prev) => ({ ...prev, [name]: '', address: '' }));
                           }}
-                          className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
+                          className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
                         />
                       </div>
                       {(errors.detailAddress || errors.address) && (
@@ -1012,11 +1012,11 @@ const CustomerManagement = () => {
               </div>
 
               {/* Footer Modal */}
-              <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3 border-t border-gray-100">
+              <div className="bg-gray-50 dark:bg-gray-800/60 px-6 py-4 flex justify-end space-x-3 border-t border-gray-100 dark:border-gray-800">
                 <button 
                   type="button"
                   onClick={() => setIsEditModalOpen(false)} 
-                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+                  className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm"
                 >
                   Hủy
                 </button>
@@ -1035,7 +1035,7 @@ const CustomerManagement = () => {
       {/* Modal Thêm mới Khách hàng (Add Modal) */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-3xl w-full overflow-hidden my-8">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 max-w-3xl w-full overflow-hidden my-8">
             {/* Header Modal */}
             <div className="bg-[#C00000] text-white px-6 py-4 flex items-center justify-between">
               <h3 className="text-lg font-bold">Thêm khách hàng thành viên mới</h3>
@@ -1055,11 +1055,11 @@ const CustomerManagement = () => {
                   
                   {/* Tên tài khoản */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       Tên đăng nhập <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                         <User size={16} />
                       </span>
                       <input 
@@ -1071,7 +1071,7 @@ const CustomerManagement = () => {
                           setAddForm({ ...addForm, username: e.target.value });
                           setErrors((prev) => ({ ...prev, username: "" }));
                         }}
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
                       />
                     </div>
                     {errors.username && <span className="text-[#C00000] text-xs font-semibold mt-1 block">{errors.username}</span>}
@@ -1079,11 +1079,11 @@ const CustomerManagement = () => {
 
                   {/* Số điện thoại */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       Số điện thoại <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                         <Phone size={16} />
                       </span>
                       <input 
@@ -1095,7 +1095,7 @@ const CustomerManagement = () => {
                           setAddForm({ ...addForm, phoneNumber: e.target.value });
                           setErrors((prev) => ({ ...prev, phoneNumber: "" }));
                         }}
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
                       />
                     </div>
                     {errors.phoneNumber && <span className="text-[#C00000] text-xs font-semibold mt-1 block">{errors.phoneNumber}</span>}
@@ -1103,11 +1103,11 @@ const CustomerManagement = () => {
 
                   {/* Họ và Tên */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       Họ và Tên <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                         <User size={16} />
                       </span>
                       <input 
@@ -1119,7 +1119,7 @@ const CustomerManagement = () => {
                           setAddForm({ ...addForm, fullName: e.target.value });
                           setErrors((prev) => ({ ...prev, fullName: "" }));
                         }}
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
                       />
                     </div>
                     {errors.fullName && <span className="text-[#C00000] text-xs font-semibold mt-1 block">{errors.fullName}</span>}
@@ -1127,11 +1127,11 @@ const CustomerManagement = () => {
 
                   {/* CMND/CCCD */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       CMND / CCCD <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                         <CreditCard size={16} />
                       </span>
                       <input 
@@ -1143,7 +1143,7 @@ const CustomerManagement = () => {
                           setAddForm({ ...addForm, identityCard: e.target.value });
                           setErrors((prev) => ({ ...prev, identityCard: "" }));
                         }}
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
                       />
                     </div>
                     {errors.identityCard && <span className="text-[#C00000] text-xs font-semibold mt-1 block">{errors.identityCard}</span>}
@@ -1151,11 +1151,11 @@ const CustomerManagement = () => {
 
                   {/* Email */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       Email <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                         <Mail size={16} />
                       </span>
                       <input 
@@ -1167,7 +1167,7 @@ const CustomerManagement = () => {
                           setAddForm({ ...addForm, email: e.target.value });
                           setErrors((prev) => ({ ...prev, email: "" }));
                         }}
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
                       />
                     </div>
                     {errors.email && <span className="text-[#C00000] text-xs font-semibold mt-1 block">{errors.email}</span>}
@@ -1175,11 +1175,11 @@ const CustomerManagement = () => {
 
                   {/* Ngày sinh */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       Ngày sinh <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                         <Calendar size={16} />
                       </span>
                       <input 
@@ -1190,7 +1190,7 @@ const CustomerManagement = () => {
                           setAddForm({ ...addForm, dateOfBirth: e.target.value });
                           setErrors((prev) => ({ ...prev, dateOfBirth: "" }));
                         }}
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
                       />
                     </div>
                     {errors.dateOfBirth && <span className="text-[#C00000] text-xs font-semibold mt-1 block">{errors.dateOfBirth}</span>}
@@ -1198,11 +1198,11 @@ const CustomerManagement = () => {
 
                   {/* Giới tính */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                       Giới tính <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none">
                         <User size={16} />
                       </span>
                       <select 
@@ -1212,7 +1212,7 @@ const CustomerManagement = () => {
                           setAddForm({ ...addForm, gender: e.target.value });
                           setErrors((prev) => ({ ...prev, gender: "" }));
                         }}
-                        className="block w-full rounded-lg border border-gray-200 pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white"
+                        className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white dark:bg-gray-800/60 dark:text-white"
                       >
                         <option value="Nam">Nam</option>
                         <option value="Nữ">Nữ</option>
@@ -1223,7 +1223,7 @@ const CustomerManagement = () => {
                   </div>
 
                   {/* Nhắc nhở mật khẩu tự sinh */}
-                  <div className="flex items-center p-3 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-center p-3 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30 rounded-lg">
                     <span className="leading-relaxed">
                       💡 Mật khẩu của tài khoản sẽ được sinh ngẫu nhiên ở server và tự động gửi tới Email của thành viên.
                     </span>
@@ -1232,11 +1232,11 @@ const CustomerManagement = () => {
                   <div className="md:col-span-2 space-y-4 text-left">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                       <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                           Tỉnh / Thành phố <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                             <MapPin size={16} />
                           </span>
                           <select
@@ -1248,7 +1248,7 @@ const CustomerManagement = () => {
                               setAddForm((prev) => applyAddressFieldChange(prev, name, value));
                               setErrors((prev) => ({ ...prev, province: '', district: '', detailAddress: '', address: '' }));
                             }}
-                            className="block w-full rounded-lg border border-gray-200 pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white"
+                            className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white dark:bg-gray-800/60 dark:text-white"
                           >
                             <option value="">Chọn Tỉnh/Thành...</option>
                             {Object.keys(locationData).map((item) => (
@@ -1260,11 +1260,11 @@ const CustomerManagement = () => {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                           Quận / Huyện <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                             <MapPin size={16} />
                           </span>
                           <select
@@ -1277,7 +1277,7 @@ const CustomerManagement = () => {
                               setErrors((prev) => ({ ...prev, [name]: '', address: '' }));
                             }}
                             disabled={!addForm.province}
-                            className="block w-full rounded-lg border border-gray-200 pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white disabled:bg-gray-50 disabled:cursor-not-allowed"
+                            className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 pl-10 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white dark:bg-gray-800/60 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800/40 disabled:cursor-not-allowed"
                           >
                             <option value="">Chọn Quận/Huyện...</option>
                             {addForm.province && locationData[addForm.province]?.map((item) => (
@@ -1290,11 +1290,11 @@ const CustomerManagement = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                      <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                         Địa chỉ chi tiết <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                           <MapPin size={16} />
                         </span>
                         <input
@@ -1308,7 +1308,7 @@ const CustomerManagement = () => {
                             setAddForm((prev) => applyAddressFieldChange(prev, name, value));
                             setErrors((prev) => ({ ...prev, [name]: '', address: '' }));
                           }}
-                          className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
+                          className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm"
                         />
                       </div>
                       {(errors.detailAddress || errors.address) && (
@@ -1323,11 +1323,11 @@ const CustomerManagement = () => {
               </div>
 
               {/* Footer Modal */}
-              <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3 border-t border-gray-100">
+              <div className="bg-gray-50 dark:bg-gray-800/60 px-6 py-4 flex justify-end space-x-3 border-t border-gray-100 dark:border-gray-800">
                 <button 
                   type="button"
                   onClick={() => setIsAddModalOpen(false)} 
-                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+                  className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm"
                 >
                   Hủy
                 </button>

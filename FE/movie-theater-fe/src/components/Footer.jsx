@@ -13,7 +13,7 @@ const Footer = () => {
 
         <div className="space-y-3">
           <h2 className="font-display text-xl font-bold tracking-wider text-[#990011] dark:text-white">
-            CINEMA <span className="text-[#E50914]">NOIR</span>
+            CINEMA <span className="text-[#E50914]">ELITE</span>
           </h2>
           <p className="leading-relaxed text-gray-400 dark:text-white/40 max-w-sm">
             <span className="text-[#E50914] dark:text-[#4CC9F0]">
@@ -53,7 +53,7 @@ const Footer = () => {
           </div>
 
           <div className="text-xs text-gray-400 dark:text-white/25 font-light">
-            &copy; 2024 Cinema Noir. Tất cả quyền được bảo lưu.
+            &copy; 2026 Cinema Elite. Tất cả quyền được bảo lưu.
           </div>
         </div>
 
@@ -64,7 +64,7 @@ const Footer = () => {
           </h3>
           <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-sm h-40 md:h-44">
             <iframe
-              title="Bản đồ Cinema Noir"
+              title="Bản đồ Cinema Elite"
               src={MAP_EMBED_URL}
               className="w-full h-full border-0"
               loading="lazy"

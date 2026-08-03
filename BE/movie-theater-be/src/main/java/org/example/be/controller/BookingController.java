@@ -9,6 +9,7 @@ import org.example.be.dto.PointsHistoryResponseDTO;
 import org.example.be.entity.Invoice;
 import org.example.be.service.BookingService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,18 +28,21 @@ public class BookingController {
     }
 
     @GetMapping("/member-score")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<Integer> getMemberScore() {
         Integer score = bookingService.getMemberScore();
         return ApiResponse.success("Member score", score);
     }
 
     @GetMapping("/history")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<BookingHistoryResponseDTO>> getBookingHistory() {
         List<BookingHistoryResponseDTO> history = bookingService.getBookingHistory();
         return ApiResponse.success("List of booking history", history);
     }
 
     @GetMapping("/points-history")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<PointsHistoryResponseDTO>> getPointsHistory() {
         List<PointsHistoryResponseDTO> pointsHistory = bookingService.getPointsHistory();
         return ApiResponse.success("Points history", pointsHistory);
@@ -82,6 +86,7 @@ public class BookingController {
     }
 
     @PostMapping("/invoice/{invoiceId}/cancel")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<Void> cancelTicket(@PathVariable Integer invoiceId) {
         try {
             bookingService.cancelTicket(invoiceId);

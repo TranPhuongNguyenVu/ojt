@@ -72,14 +72,17 @@ class BeApplicationTests {
             accountRepository.delete(acc);
         }
         
-        // Secondary fallback in case username is present
-        accountRepository.findByUsername(username).ifPresent(acc -> {
-            memberRepository.findAll().stream()
-                    .filter(m -> m.getAccount() != null && m.getAccount().getAccountId().equals(acc.getAccountId()))
-                    .findFirst()
-                    .ifPresent(memberRepository::delete);
-            accountRepository.delete(acc);
-        });
+        // Tertiary fallback by phone or identity card
+        accountRepository.findAll().stream()
+                .filter(a -> "0999999999".equals(a.getPhoneNumber()))
+                .findFirst()
+                .ifPresent(acc -> {
+                    memberRepository.findAll().stream()
+                            .filter(m -> m.getAccount() != null && m.getAccount().getAccountId().equals(acc.getAccountId()))
+                            .findFirst()
+                            .ifPresent(memberRepository::delete);
+                    accountRepository.delete(acc);
+                });
     }
 
     @Test
@@ -92,8 +95,8 @@ class BeApplicationTests {
         request.setFullName("Test Customer Self");
         request.setDateOfBirth(LocalDate.of(2000, 1, 1));
         request.setGender("Nam");
-        request.setIdentityCard("123456789");
-        request.setPhoneNumber("0987654321");
+        request.setIdentityCard("999999999999");
+        request.setPhoneNumber("0999999999");
         request.setAddress("Hanoi, Vietnam");
 
         // 2. Perform register
@@ -193,7 +196,7 @@ class BeApplicationTests {
         Field field = OtpService.class.getDeclaredField("otpStorage");
         field.setAccessible(true);
         Map<String, ?> otpStorage = (Map<String, ?>) field.get(otpService);
-        Object otpData = otpStorage.get(key);
+        Object otpData = otpStorage.get(key != null ? key.toLowerCase() : "");
         if (otpData == null) return null;
         
         Field codeField = otpData.getClass().getDeclaredField("otpCode");

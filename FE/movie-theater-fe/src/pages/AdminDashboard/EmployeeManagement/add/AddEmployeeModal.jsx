@@ -76,7 +76,7 @@ const AddEmployeeModal = ({ onClose, onSuccess }) => {
       <form onSubmit={handleSubmit} noValidate>
         <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           {errorMessage && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300">
               {errorMessage}
             </div>
           )}

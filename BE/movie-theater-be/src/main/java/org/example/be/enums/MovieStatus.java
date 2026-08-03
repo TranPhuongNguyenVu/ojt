@@ -4,6 +4,6 @@ public enum MovieStatus {
     UPCOMING,
     SHOWING,
     ENDED,
-    INACTIVE,
-    DELETED
+    UNSCHEDULED,
+    INACTIVE
 }

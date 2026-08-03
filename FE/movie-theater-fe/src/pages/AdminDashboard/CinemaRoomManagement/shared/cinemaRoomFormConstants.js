@@ -48,15 +48,15 @@ export const formatVndShort = (value) => {
 
 export const getRoomStatusBadge = (status) =>
   status === ROOM_STATUS.INACTIVE
-    ? { label: CINEMA_ROOM_LABELS.statusInactive, cls: "bg-red-50 border-red-200 text-red-700" }
-    : { label: CINEMA_ROOM_LABELS.statusActive, cls: "bg-green-50 border-green-200 text-green-700" };
+    ? { label: CINEMA_ROOM_LABELS.statusInactive, cls: "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-300" }
+    : { label: CINEMA_ROOM_LABELS.statusActive, cls: "bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-500/30 text-green-700 dark:text-green-300" };
 
 export const SEAT_LEGEND_ITEMS = [
-  { key: "normal", label: CINEMA_ROOM_LABELS.seatTypeNormal, swatchCls: "bg-slate-100 border border-slate-300" },
-  { key: "vip", label: CINEMA_ROOM_LABELS.seatTypeVip, swatchCls: "bg-amber-50 border-2 border-amber-500" },
+  { key: "normal", label: CINEMA_ROOM_LABELS.seatTypeNormal, swatchCls: "bg-slate-100 dark:bg-gray-700 border border-slate-300 dark:border-gray-600" },
+  { key: "vip", label: CINEMA_ROOM_LABELS.seatTypeVip, swatchCls: "bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-500" },
   { key: "couple", label: CINEMA_ROOM_LABELS.seatTypeCouple, swatchCls: "bg-gradient-to-r from-pink-500 to-rose-500", wide: true },
-  { key: "booked", label: "Đã đặt", swatchCls: "bg-slate-500" },
-  { key: "inactive", label: CINEMA_ROOM_LABELS.seatStatusInactive, swatchCls: "bg-slate-300 border border-slate-400" },
-  { key: "aisle", label: CINEMA_ROOM_LABELS.seatAisle, swatchCls: "border border-dashed border-slate-400 bg-slate-50" },
+  { key: "booked", label: "Đã đặt", swatchCls: "bg-slate-500 dark:bg-gray-600" },
+  { key: "inactive", label: CINEMA_ROOM_LABELS.seatStatusInactive, swatchCls: "bg-slate-300 dark:bg-gray-900 border border-slate-400 dark:border-gray-700" },
+  { key: "aisle", label: CINEMA_ROOM_LABELS.seatAisle, swatchCls: "border border-dashed border-slate-400 dark:border-gray-600 bg-slate-50 dark:bg-gray-800" },
   { key: "selected", label: CINEMA_ROOM_LABELS.seatSelected, swatchCls: "bg-sky-500 border-2 border-sky-600" },
 ];

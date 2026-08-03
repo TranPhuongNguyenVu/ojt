@@ -10,6 +10,8 @@ const IMAGE_SLIDE_MS = 8000;
 const VIDEO_SLIDE_MS = 20000;
 // Bỏ qua 2 giây đầu của trailer (intro/màn đen), áp dụng cả khi video loop lại
 const TRAILER_START_SECONDS = 2;
+// Băng chuyền thumbnail chỉ hiển thị tối đa 5 phim cùng lúc, dù carousel xoay qua nhiều phim hơn
+const THUMBNAIL_WINDOW = 5;
 
 /** Load YouTube IFrame API một lần, dùng chung cho toàn app. */
 let youtubeApiPromise = null;
@@ -164,6 +166,33 @@ const TrailerBackdrop = forwardRef(function TrailerBackdrop({ videoId, onPlaying
   useEffect(() => {
     let cancelled = false;
     let player = null;
+    let pollId = null;
+
+    const clearPoll = () => {
+      if (pollId) {
+        clearInterval(pollId);
+        pollId = null;
+      }
+    };
+
+    // YouTube chỉ hiện overlay pause/next (endscreen gợi ý video) khi video CHẠM mốc kết thúc thật.
+    // Vòng lặp qua `loop:1 + playlist` vẫn đi qua khoảnh khắc đó nên bị flash overlay.
+    // => Chủ động seek về đầu trailer NGAY TRƯỚC khi chạm mốc kết thúc, video không bao giờ "ended" thật sự.
+    const startPoll = () => {
+      clearPoll();
+      pollId = setInterval(() => {
+        if (cancelled || !playerRef.current) return;
+        try {
+          const duration = playerRef.current.getDuration?.();
+          const current = playerRef.current.getCurrentTime?.();
+          if (duration > 0 && current > 0 && duration - current <= 0.4) {
+            playerRef.current.seekTo(TRAILER_START_SECONDS, true);
+          }
+        } catch {
+          // ignore
+        }
+      }, 250);
+    };
 
     const createPlayer = (YT) => {
       if (cancelled || !hostRef.current) return;
@@ -198,6 +227,7 @@ const TrailerBackdrop = forwardRef(function TrailerBackdrop({ videoId, onPlaying
             }
             // Hiện video + nút mute ngay khi player sẵn sàng
             onPlaying();
+            startPoll();
           },
           onStateChange: (e) => {
             if (cancelled) return;
@@ -216,6 +246,7 @@ const TrailerBackdrop = forwardRef(function TrailerBackdrop({ videoId, onPlaying
           onError: () => {
             if (cancelled) return;
             playerRef.current = null;
+            clearPoll();
             onFailed?.();
           },
         },
@@ -231,6 +262,7 @@ const TrailerBackdrop = forwardRef(function TrailerBackdrop({ videoId, onPlaying
 
     return () => {
       cancelled = true;
+      clearPoll();
       playerRef.current = null;
       try {
         player?.destroy?.();
@@ -256,16 +288,25 @@ const TrailerBackdrop = forwardRef(function TrailerBackdrop({ videoId, onPlaying
  * Tự chuyển slide, dừng khi hover, tôn trọng prefers-reduced-motion.
  */
 const HeroComponent = ({ movies = [], loading = false }) => {
-  // Ưu tiên phim có trailer YouTube lên đầu carousel.
+  // Ưu tiên phim có trailer YouTube lên đầu carousel. Không giới hạn số phim tham gia xoay vòng
+  // (trước đây cắt còn 5) — carousel giờ xoay qua toàn bộ phim đang chiếu, băng chuyền thumbnail
+  // bên dưới mới là nơi giới hạn hiển thị đồng thời 5 phim.
   // Backend trả danh sách không có ORDER BY nên thứ tự có thể xáo trộn giữa các lần gọi;
   // sort theo movieId trước để hero luôn ổn định.
   const featured = useMemo(() => {
     const sorted = [...movies].sort((a, b) => String(a.movieId).localeCompare(String(b.movieId)));
     const withTrailer = sorted.filter((m) => Boolean(getYoutubeId(m.trailer)));
     const withoutTrailer = sorted.filter((m) => !getYoutubeId(m.trailer));
-    return [...withTrailer, ...withoutTrailer].slice(0, 5);
+    return [...withTrailer, ...withoutTrailer];
   }, [movies]);
   const [active, setActive] = useState(0);
+  // Cửa sổ băng chuyền: 5 phim liên tiếp bắt đầu từ slide đang active, cuộn tới khi active đổi
+  const thumbnails = useMemo(() => {
+    const n = featured.length;
+    if (n === 0) return [];
+    const size = Math.min(THUMBNAIL_WINDOW, n);
+    return Array.from({ length: size }, (_, i) => featured[(active + i) % n]);
+  }, [featured, active]);
   const [videoReady, setVideoReady] = useState(false);
   const [muted, setMuted] = useState(true);
   const pausedRef = useRef(false);
@@ -480,15 +521,15 @@ const HeroComponent = ({ movies = [], loading = false }) => {
         <div className="hidden lg:flex flex-col items-end gap-5 shrink-0">
           <TiltPoster key={movie.movieId} movie={movie} />
 
-          {featured.length > 1 && (
+          {thumbnails.length > 1 && (
             <div className="flex items-end gap-3">
-              {featured.map((m, i) => (
+              {thumbnails.map((m, i) => (
                 <button
-                  key={m.movieId}
-                  onClick={() => setActive(i)}
+                  key={`${m.movieId}-${i}`}
+                  onClick={() => setActive(featured.findIndex((f) => f.movieId === m.movieId))}
                   aria-label={`Xem ${m.movieNameVn || m.movieNameEnglish}`}
                   className={`relative w-14 rounded-lg overflow-hidden transition-all duration-300 cursor-pointer ${
-                    i === active
+                    i === 0
                       ? 'h-24 ring-2 ring-[#E50914] shadow-lg shadow-red-600/30'
                       : 'h-20 opacity-60 hover:opacity-100 ring-1 ring-white/20 hover:-translate-y-1'
                   }`}

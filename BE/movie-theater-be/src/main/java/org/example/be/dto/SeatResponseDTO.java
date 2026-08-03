@@ -14,6 +14,7 @@ public class SeatResponseDTO {
     private String seatColumn;
     private Integer seatRow;
     private Integer seatType;
+    private Integer pairSeatId;
     private String status;
     /** 0=AVAILABLE, 1=BOOKED, 2=DRAFT */
     private Integer bookingStatus;

@@ -1,12 +1,15 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Shield, Users, UserCircle, LogOut, Home } from 'lucide-react';
+import { Shield, Users, UserCircle, LogOut, Home, LayoutDashboard, UserCheck } from 'lucide-react';
 import CustomerService from '../services/CustomerService';
+import ThemeToggle from '../components/ThemeToggle';
 
 const SystemAdminTemplate = () => {
   const navigate = useNavigate();
 
   const mainNavItems = [
     { name: 'Quản lý admin', path: '/system-admin/admins', icon: Users },
+    { name: 'Trang Admin', path: '/admin/statistics', icon: LayoutDashboard },
+    { name: 'Trang Nhân viên', path: '/employee/statistics', icon: UserCheck },
     { name: 'Thông tin cá nhân', path: '/system-admin/profile', icon: UserCircle },
   ];
 
@@ -19,29 +22,32 @@ const SystemAdminTemplate = () => {
   };
 
   return (
-    <div className="w-full min-h-screen flex flex-col bg-gray-50 font-sans lg:flex-row lg:h-screen lg:overflow-hidden">
+    <div className="w-full min-h-screen flex flex-col bg-gray-50 dark:bg-[#050505] font-sans lg:flex-row lg:h-screen lg:overflow-hidden transition-colors duration-300">
 
       {/* ================= SIDEBAR (Bên trái) ================= */}
-      <aside className="w-full bg-[#F1F3F5] border-b border-gray-200 flex flex-col gap-4 py-5 px-4 select-none shrink-0 lg:min-h-screen lg:w-64 lg:justify-between lg:border-b-0 lg:border-r lg:py-8 lg:pl-0 lg:pr-4">
+      <aside className="w-full bg-[#F1F3F5] dark:bg-[#0a0a0f]/75 backdrop-blur-xl border-b border-gray-200 dark:border-white/10 flex flex-col gap-4 py-5 px-4 select-none shrink-0 lg:h-screen lg:overflow-y-auto lg:w-64 lg:justify-between lg:border-b-0 lg:border-r lg:py-8 lg:pl-0 lg:pr-4 transition-colors duration-300">
 
         {/* Phần trên: Logo & Thông tin User */}
         <div className="space-y-4 lg:space-y-8 lg:pl-6">
           {/* Tên thương hiệu */}
-          <h1 className="text-xl font-black tracking-wider text-gray-950 flex items-center gap-2">
-            <Shield size={20} className="text-[#C00000]" />
-            SysAdmin Hub
-          </h1>
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-xl font-black tracking-wider text-gray-950 dark:text-white flex items-center gap-2 whitespace-nowrap">
+              <Shield size={20} className="text-[#C00000] dark:text-[#ff4d57]" />
+              SysAdmin Hub
+            </h1>
+            <ThemeToggle />
+          </div>
 
           {/* Khối thông tin Hub / Nhân viên */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center shrink-0 border border-gray-300">
+            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center shrink-0 border border-gray-300 dark:border-white/15">
               <Shield size={18} className="text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px] font-black tracking-wider text-[#C00000] uppercase leading-tight">
+              <span className="text-[10px] font-black tracking-wider text-[#C00000] dark:text-[#ff4d57] uppercase leading-tight">
                 SYSTEM ADMINISTRATOR
               </span>
-              <span className="text-[10px] font-medium text-gray-400">
+              <span className="text-[10px] font-medium text-gray-400 dark:text-white/45">
                 Toàn quyền hệ thống
               </span>
             </div>
@@ -59,8 +65,8 @@ const SystemAdminTemplate = () => {
                 className={({ isActive }) =>
                   `relative flex shrink-0 items-center space-x-3 rounded-lg px-3 py-3 text-xs font-black tracking-widest transition-all duration-200 lg:space-x-4 lg:rounded-none lg:pl-6 ${
                     isActive
-                      ? 'text-[#C00000] bg-gradient-to-r from-red-50 to-transparent'
-                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50'
+                      ? 'text-[#C00000] dark:text-[#ff4d57] bg-gradient-to-r from-red-50 dark:from-red-950/50 to-transparent'
+                      : 'text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/8'
                   }`
                 }
               >
@@ -68,7 +74,7 @@ const SystemAdminTemplate = () => {
                   <>
                     {/* Vạch đỏ đứng bên trái khi Tab được Active */}
                     {isActive && (
-                      <span className="absolute left-0 top-0 bottom-0 w-[4px] bg-[#C00000] rounded-r-md"></span>
+                      <span className="absolute left-0 top-0 bottom-0 w-[4px] bg-[#C00000] dark:bg-[#E50914] rounded-r-md"></span>
                     )}
                     <Icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
                     <span>{item.name}</span>
@@ -80,17 +86,17 @@ const SystemAdminTemplate = () => {
         </div>
 
         {/* Phần dưới cùng: TRANG CHỦ & ĐĂNG XUẤT */}
-        <div className="hidden border-t border-gray-200/60 pt-4 lg:flex lg:flex-col lg:space-y-1">
+        <div className="flex shrink-0 gap-1 overflow-x-auto border-t-0 pt-2 lg:overflow-visible lg:flex-col lg:space-y-1 lg:border-t lg:border-gray-200/60 lg:dark:border-white/10 lg:pt-4">
           <NavLink
             to="/"
-            className="flex items-center space-x-4 pl-6 py-3 text-xs font-black tracking-widest text-gray-500 hover:text-[#C00000] w-full text-left"
+            className="flex shrink-0 items-center space-x-3 rounded-lg px-3 py-3 text-xs font-black tracking-widest text-gray-500 dark:text-white/40 hover:text-[#C00000] dark:hover:text-[#ff4d57] lg:space-x-4 lg:rounded-none lg:pl-6 lg:w-full text-left"
           >
             <Home size={16} strokeWidth={2} />
             <span>Trang chủ</span>
           </NavLink>
           <button
             onClick={handleSignOut}
-            className="flex items-center space-x-4 pl-6 py-3 text-xs font-black tracking-widest text-gray-500 hover:text-[#C00000] w-full text-left"
+            className="flex shrink-0 items-center space-x-3 rounded-lg px-3 py-3 text-xs font-black tracking-widest text-gray-500 dark:text-white/40 hover:text-[#C00000] dark:hover:text-[#ff4d57] lg:space-x-4 lg:rounded-none lg:pl-6 lg:w-full text-left"
           >
             <LogOut size={16} strokeWidth={2} />
             <span>Đăng xuất</span>
@@ -100,7 +106,7 @@ const SystemAdminTemplate = () => {
       </aside>
 
       {/* ================= MAIN CONTENT AREA (Bên phải) ================= */}
-      <main className="flex-1 min-h-screen overflow-y-auto bg-white p-4 sm:p-6 md:p-8 lg:p-10">
+      <main className="flex-1 min-h-screen overflow-y-auto bg-white dark:bg-transparent text-gray-900 dark:text-gray-100 p-4 sm:p-6 md:p-8 lg:p-10 transition-colors duration-300">
         <Outlet />
       </main>
 

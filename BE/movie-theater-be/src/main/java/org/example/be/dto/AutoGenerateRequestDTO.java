@@ -20,10 +20,10 @@ public class AutoGenerateRequestDTO {
     private Integer showsPerDayPerRoom;
     private Integer maxMoviesPerRoom;
     private Integer gapCleanup;
+    private List<Integer> allowInsertIntoBusyDayRoomIds;
     private List<String> movieIds;
     private List<Integer> roomIds;
-    /** movieId -> chosen versionId for this generation run. */
-    private Map<String, Integer> movieVersions;
-    /** movieId -> priority ratio (1-5) used to split shows within a time window. */
     private Map<String, Integer> movieRatios;
+    private Map<String, Map<Integer, Integer>> movieFormatRatios;
+    private Map<String, List<Integer>> movieRoomIds;
 }

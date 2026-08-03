@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 const EmployeeModalLayout = ({ title, onClose, children }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
     <div
-      className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-3xl w-full overflow-hidden my-8"
+      className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 max-w-3xl w-full overflow-hidden my-8"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="bg-[#C00000] text-white px-6 py-4 flex items-center justify-between">

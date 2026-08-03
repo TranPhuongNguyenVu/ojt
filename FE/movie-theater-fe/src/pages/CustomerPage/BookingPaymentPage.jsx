@@ -41,6 +41,7 @@ const BookingPaymentPage = () => {
   const [pointsInput, setPointsInput] = useState('');
   const [pointsToUse, setPointsToUse] = useState(0);
   const [txnCode, setTxnCode] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('MOMO'); // 'MOMO' | 'VNPAY'
 
   // Sinh mã giao dịch ngẫu nhiên
   useEffect(() => {
@@ -143,6 +144,9 @@ const BookingPaymentPage = () => {
 
   const getSeatPrice = (seat) => (seat.price != null ? parseFloat(seat.price) : 0);
 
+  const MAX_CONCESSION_ITEM_QUANTITY = 10;
+  const MAX_CONCESSION_TOTAL_QUANTITY = 20;
+
   // Thêm / bớt số lượng bắp nước combo
   const handleQuantityChange = (item, type, sizeObj, delta) => {
     const size = sizeObj?.size || 'NONE';
@@ -162,6 +166,22 @@ const BookingPaymentPage = () => {
       };
 
       const newQty = Math.max(0, current.quantity + delta);
+
+      if (delta > 0) {
+        if (newQty > MAX_CONCESSION_ITEM_QUANTITY) {
+          alert(`Mỗi món chỉ được chọn tối đa ${MAX_CONCESSION_ITEM_QUANTITY} phần.`);
+          return prev;
+        }
+        const totalOfOthers = Object.entries(prev).reduce(
+          (sum, [k, v]) => sum + (k === key ? 0 : v.quantity),
+          0
+        );
+        if (totalOfOthers + newQty > MAX_CONCESSION_TOTAL_QUANTITY) {
+          alert(`Tổng số lượng bắp nước & combo không được vượt quá ${MAX_CONCESSION_TOTAL_QUANTITY} phần.`);
+          return prev;
+        }
+      }
+
       if (newQty === 0) {
         const copy = { ...prev };
         delete copy[key];
@@ -181,7 +201,7 @@ const BookingPaymentPage = () => {
       return;
     }
 
-    AuthService.get(`promotions/validate?code=${promoCodeInput.trim()}`)
+    AuthService.get(`promotions/validate?code=${encodeURIComponent(promoCodeInput.trim())}&scheduleId=${scheduleId}`)
       .then((res) => {
         if (res.data.status === 200) {
           setAppliedPromotion(res.data.data);
@@ -198,7 +218,7 @@ const BookingPaymentPage = () => {
       });
   };
 
-  // Xác nhận thanh toán qua MoMo
+  // Xác nhận thanh toán qua MoMo hoặc VNPay
   const handleConfirmPayment = () => {
     if (!txnCode || selectedSeats.length === 0) {
       alert("Dữ liệu đặt vé không hợp lệ. Vui lòng quay lại chọn ghế.");
@@ -212,8 +232,14 @@ const BookingPaymentPage = () => {
       seatIds,
       promotionId: appliedPromotion ? appliedPromotion.promotionId : null,
       useScore: activePointsToUse,
-      totalMoney: finalTotal,
-      paymentMethod: 'MOMO'
+      totalMoney: finalTotal - concessionSum,
+      paymentMethod,
+      concessions: concessionList.map((c) => ({
+        itemType: c.type,
+        itemId: c.id,
+        size: c.size,
+        quantity: c.quantity
+      }))
     };
 
     const saveConcessionOrder = (invId) => {
@@ -222,8 +248,13 @@ const BookingPaymentPage = () => {
       }
     };
 
+    const gatewayLabel = paymentMethod === 'VNPAY' ? 'VNPay' : 'MoMo';
+    const createPayment = paymentMethod === 'VNPAY'
+      ? BookingService.createVnPayPayment
+      : BookingService.createMomoPayment;
+
     keepHoldRef.current = true;
-    BookingService.createMomoPayment(paymentData)
+    createPayment(paymentData)
       .then((res) => {
         if (res.data && res.data.payUrl) {
           saveConcessionOrder(res.data.invoiceId);
@@ -231,12 +262,12 @@ const BookingPaymentPage = () => {
           window.location.href = res.data.payUrl;
         } else {
           keepHoldRef.current = false;
-          alert("Không khởi tạo được link thanh toán MoMo. Vui lòng thử lại sau.");
+          alert(`Không khởi tạo được link thanh toán ${gatewayLabel}. Vui lòng thử lại sau.`);
         }
       })
       .catch((err) => {
         keepHoldRef.current = false;
-        console.error("Lỗi tạo link thanh toán MoMo:", err);
+        console.error(`Lỗi tạo link thanh toán ${gatewayLabel}:`, err);
         alert(err.response?.data?.error || "Booking failed. Please try again later.");
       });
   };
@@ -611,23 +642,60 @@ const BookingPaymentPage = () => {
                   </div>
                 )}
               </div>
-              <div className="p-5 rounded-2xl flex items-center justify-between border-2 border-[#E50914] ring-2 ring-[#E50914]/10 bg-white dark:bg-gray-900">
-                <div className="flex items-center space-x-3.5">
-                  <div className="w-10 h-10 rounded-lg bg-pink-100 dark:bg-pink-950/50 text-pink-600 dark:text-pink-400 font-extrabold flex items-center justify-center text-xs">
-                    MoMo
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('MOMO')}
+                  className={`w-full p-5 rounded-2xl flex items-center justify-between border-2 bg-white dark:bg-gray-900 transition-all cursor-pointer ${
+                    paymentMethod === 'MOMO'
+                      ? 'border-[#E50914] ring-2 ring-[#E50914]/10'
+                      : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3.5">
+                    <div className="w-10 h-10 rounded-lg bg-pink-100 dark:bg-pink-950/50 text-pink-600 dark:text-pink-400 font-extrabold flex items-center justify-center text-xs">
+                      MoMo
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-xs md:text-sm font-black text-gray-850 dark:text-gray-100 uppercase leading-none">
+                        Ví MoMo
+                      </h3>
+                      <p className="text-[10px] text-gray-400 font-medium mt-1">
+                        Thanh toán qua ví điện tử
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xs md:text-sm font-black text-gray-850 dark:text-gray-100 uppercase leading-none">
-                      Ví MoMo
-                    </h3>
-                    <p className="text-[10px] text-gray-400 font-medium mt-1">
-                      Thanh toán qua ví điện tử
-                    </p>
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'MOMO' ? 'border-[#E50914]' : 'border-gray-300 dark:border-gray-600'}`}>
+                    {paymentMethod === 'MOMO' && <div className="w-2 h-2 rounded-full bg-[#E50914]"></div>}
                   </div>
-                </div>
-                <div className="w-4 h-4 rounded-full border border-[#E50914] flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-[#E50914]"></div>
-                </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('VNPAY')}
+                  className={`w-full p-5 rounded-2xl flex items-center justify-between border-2 bg-white dark:bg-gray-900 transition-all cursor-pointer ${
+                    paymentMethod === 'VNPAY'
+                      ? 'border-[#E50914] ring-2 ring-[#E50914]/10'
+                      : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3.5">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-extrabold flex items-center justify-center text-[9px]">
+                      VNPay
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-xs md:text-sm font-black text-gray-850 dark:text-gray-100 uppercase leading-none">
+                        VNPay
+                      </h3>
+                      <p className="text-[10px] text-gray-400 font-medium mt-1">
+                        Thẻ ATM / QR / Ví điện tử qua cổng VNPay
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'VNPAY' ? 'border-[#E50914]' : 'border-gray-300 dark:border-gray-600'}`}>
+                    {paymentMethod === 'VNPAY' && <div className="w-2 h-2 rounded-full bg-[#E50914]"></div>}
+                  </div>
+                </button>
               </div>
             </div>
 
@@ -652,12 +720,12 @@ const BookingPaymentPage = () => {
                 <div className="pl-3 border-l-2 border-gray-200 dark:border-gray-700 space-y-1.5 text-[11px] text-gray-500 dark:text-gray-400 font-semibold">
                   {selectedSeats.map(seat => {
                     const label = `${getRowLetter(seat.seatRow)}${seat.seatColumn}`;
-                    const isVIP = seat.seatType === 1;
+                    const seatTypeLabel = seat.seatType === 2 ? 'Đôi' : seat.seatType === 1 ? 'VIP' : 'Thường';
                     const price = getSeatPrice(seat);
                     const formattedPrice = new Intl.NumberFormat('vi-VN').format(price);
                     return (
                       <div key={seat.seatId} className="flex justify-between items-center">
-                        <span>Ghế {label} ({isVIP ? 'VIP' : 'Thường'})</span>
+                        <span>Ghế {label} ({seatTypeLabel})</span>
                         <span>{formattedPrice} VNĐ</span>
                       </div>
                     );

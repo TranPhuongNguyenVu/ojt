@@ -103,11 +103,11 @@ export const MOVIE_LABELS = {
   columnStatus: "Trạng thái",
   columnActions: "Thao tác",
 
-  statusInactive: "Chưa lên lịch",
+  statusUnscheduled: "Chưa lên lịch",
   statusUpcoming: "Sắp chiếu",
   statusShowing: "Đang chiếu",
   statusEnded: "Đã kết thúc",
-  statusDeleted: "Đã xoá",
+  statusInactive: "Ngừng hoạt động",
 
   hasSchedulesError: "Không thể thực hiện thao tác vì phim đang có lịch chiếu.",
 
@@ -153,10 +153,29 @@ export const SCHEDULE_LABELS = {
   filterAll: "Tất cả",
   labelMovie: "Phim",
   labelRoom: "Phòng",
+  searchMoviePlaceholder: "Tìm theo tên phim...",
   clearFilters: "Xóa bộ lọc",
   noScheduleMatchesFilter: "Không có suất chiếu nào khớp với bộ lọc.",
   timelineRoomHeader: "Phòng",
   timelineEmpty: "Không có phòng chiếu nào.",
+  columnStatus: "Trạng thái",
+  statusScheduled: "Chưa chiếu",
+  statusShowing: "Đang chiếu",
+  statusEnded: "Đã kết thúc",
+  statusCancelled: "Đã hủy",
+  statusDeleted: "Đã xóa",
+  detailTitle: "Chi tiết suất chiếu",
+  detailEdit: "Sửa suất chiếu",
+  detailClose: "Đóng",
+  detailFormat: "Định dạng",
+  detailDuration: "Thời lượng",
+  detailRoom: "Phòng chiếu",
+  detailSoldSeats: "Ghế đã bán",
+  detailLoadingSeats: "Đang tải sơ đồ ghế...",
+  detailSeatError: "Không thể tải sơ đồ ghế cho suất chiếu này.",
+  detailMovieError: "Không thể tải thông tin phim.",
+  editDeleteButton: "Xóa suất chiếu",
+  editRoomLockedHint: "Không thể đổi phòng chiếu sau khi đã tạo suất chiếu.",
 };
 
 export const CONCESSION_LABELS = {
@@ -235,4 +254,84 @@ export const CONCESSION_LABELS = {
   validationPriceRequired: "Vui lòng chọn ít nhất một loại giá.",
   validationPricePositive: "Giá phải lớn hơn 0.",
   validationNoneExclusive: "Loại giá Tiêu chuẩn không thể kết hợp với Nhỏ/Vừa/Lớn.",
+
+  fieldComboFoodItems: "Thành phần đồ ăn",
+  fieldComboDrinkItems: "Thành phần thức uống",
+  comboItemQuantityLabel: "Số lượng",
+  comboNoFoodAvailable: "Chưa có món ăn khả dụng.",
+  comboNoDrinkAvailable: "Chưa có thức uống khả dụng.",
+  comboNoPriceAvailable: "Chưa có giá bán.",
+  viewPriceButton: "Giá",
+  validationComboNeedsFood: "Combo cần ít nhất 1 món ăn.",
+  validationComboNeedsDrink: "Combo cần ít nhất 1 thức uống.",
+  comboEmptyWarning: "Combo chưa có thành phần, cần bổ sung món ăn và thức uống.",
+  comboCompositionLabel: "Thành phần",
+};
+
+export const TICKET_CHECKIN_LABELS = {
+  pageTitle: "Soát vé",
+  navLabel: "Soát vé",
+  scanTabLabel: "Quét mã QR",
+  manualTabLabel: "Nhập mã vé",
+  manualInputPlaceholder: "Nhập mã vé (VD: A3K7M9P2)",
+  manualSubmitButton: "Tra cứu",
+  startScanButton: "Bắt đầu quét",
+  stopScanButton: "Dừng quét",
+  scannerPlaceholder: "Hướng camera vào mã QR trên vé",
+
+  loading: "Đang tra cứu vé...",
+  notFound: "Không tìm thấy vé với mã này.",
+  genericError: "Đã xảy ra lỗi. Vui lòng thử lại.",
+
+  ticketFound: "Thông tin vé",
+  movieLabel: "Phim",
+  showtimeLabel: "Suất chiếu",
+  roomLabel: "Phòng chiếu",
+  seatsLabel: "Ghế",
+  seatCountLabel: "Số lượng vé",
+  statusLabel: "Trạng thái",
+
+  statusBooked: "Hợp lệ - Chưa soát vé",
+  statusCheckedIn: "Đã soát vé",
+  statusCancelled: "Đã huỷ",
+  statusExpired: "Đã hết hạn",
+
+  checkedInAtLabel: "Thời gian soát vé",
+  checkedInByLabel: "Nhân viên soát vé",
+  cancelledAtLabel: "Thời gian huỷ",
+
+  confirmButton: "Xác nhận soát vé",
+  confirming: "Đang xác nhận...",
+  checkInSuccess: "Soát vé thành công!",
+  scanAnotherButton: "Soát vé khác",
+
+  alreadyCheckedInWarning: "Vé này đã được soát vé trước đó.",
+  cancelledWarning: "Vé này đã bị huỷ, không thể soát vé.",
+  expiredWarning: "Vé này đã hết hạn do suất chiếu đã kết thúc, không thể soát vé.",
+};
+
+export const BOOKING_CONCESSION_LABELS = {
+  stepTitle: "Chọn bắp nước (không bắt buộc)",
+  stepSubtitle: "Thêm đồ ăn, thức uống hoặc combo cho suất chiếu của bạn",
+  skipNote: "Bạn có thể bỏ qua bước này nếu không muốn mua thêm.",
+
+  tabFood: "Đồ ăn",
+  tabDrink: "Nước uống",
+  tabCombo: "Combo",
+
+  sizeNone: "Tiêu chuẩn",
+  sizeS: "Nhỏ",
+  sizeM: "Vừa",
+  sizeL: "Lớn",
+
+  quantityLabel: "Số lượng",
+  currencyUnit: "đ",
+
+  orderSummaryTitle: "Tóm tắt đơn hàng",
+  seatsSubtotalLabel: "Tiền ghế",
+  concessionsSubtotalLabel: "Tiền bắp nước",
+  grandTotalLabel: "Tổng cộng",
+
+  emptyList: "Hiện chưa có sản phẩm nào.",
+  loadError: "Không thể tải danh sách bắp nước.",
 };

@@ -87,6 +87,6 @@ public class Promotion {
     private Boolean birthdayOnly = false;
 
     @Builder.Default
-    @Column(name = "IS_DELETED", nullable = false)
-    private Integer isDeleted = 0;
+    @Column(name = "ALLOW_MULTIPLE_USE_PER_CUSTOMER", nullable = false)
+    private Boolean allowMultipleUsePerCustomer = true;
 }

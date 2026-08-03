@@ -15,7 +15,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, String> {
     @Query("""
             SELECT e FROM Employee e
             JOIN FETCH e.account a
-            WHERE a.status = 1 AND (
+            WHERE (
                 LOWER(e.employeeId) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
                 LOWER(a.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
                 LOWER(a.identityCard) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
@@ -30,7 +30,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, String> {
     @Query("""
             SELECT e FROM Employee e
             JOIN FETCH e.account a
-            WHERE a.status = 1
             ORDER BY a.fullName ASC
             """)
     List<Employee> findAllWithAccount();

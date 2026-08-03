@@ -100,13 +100,13 @@ public class AuthService {
             throw new IllegalArgumentException(invalidMsg);
         }
 
-        // 3. Kiểm tra tài khoản bị khóa (status = 0) hoặc vô hiệu hóa (status = 2)
-//        if (account.getStatus() != null && account.getStatus() == 2) {
-//            throw new IllegalArgumentException("Account has been locked!");
-//        }
-//        if (account.getStatus() != null && account.getStatus() == 3) {
-//            throw new IllegalArgumentException("Account has been disabled!");
-//        }
+        // 3. Kiểm tra tài khoản bị khóa (status = 2) hoặc xóa mềm (status = 3)
+        if (account.getStatus() != null && account.getStatus() == 2) {
+            throw new IllegalArgumentException("Tài khoản của bạn đã bị khóa! Vui lòng liên hệ Admin.");
+        }
+        if (account.getStatus() != null && account.getStatus() == 3) {
+            throw new IllegalArgumentException("Tài khoản của bạn đã bị xóa!");
+        }
 
         // 4. Kêu máy tự động in ra Token
         String token = jwtUtil.generateToken(account);

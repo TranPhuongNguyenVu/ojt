@@ -14,14 +14,12 @@ const HomePage = () => {
     MovieService.getAllMovies()
       .then((response) => {
         const allMovies = response.data.data || [];
-        const tzoffset = (new Date()).getTimezoneOffset() * 60000;
-        const localISODate = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
 
-        // Phân loại phim:
-        // Phim đang chiếu: từ ngày <= hôm nay và (không có ngày kết thúc hoặc ngày kết thúc >= hôm nay)
-        const active = allMovies.filter(m => m.fromDate <= localISODate && (!m.toDate || m.toDate >= localISODate));
-        // Phim sắp chiếu: từ ngày > hôm nay
-        const upcoming = allMovies.filter(m => m.fromDate > localISODate);
+        // Lọc theo status do BE tính (MovieStatusResolver), không tự suy ra từ fromDate/toDate:
+        // trang chủ là mặt tiền công khai nên phải luôn ẩn UNSCHEDULED/INACTIVE, kể cả khi
+        // API trả về danh sách chưa lọc (trường hợp cookie của tài khoản Admin bị gửi kèm).
+        const active = allMovies.filter(m => m.status === 'SHOWING');
+        const upcoming = allMovies.filter(m => m.status === 'UPCOMING');
 
         setNowShowing(active);
         setComingSoon(upcoming);

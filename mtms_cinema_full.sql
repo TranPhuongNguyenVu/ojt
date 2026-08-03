@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 9a4lcqsLl9UtZDdikrvqvPKoYrXoRxgDryLT8b5ZjV8KyO9rAErIACWcxrNecjn
+
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -19,95 +19,95 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
-ALTER TABLE IF EXISTS ONLY public.score_transaction DROP CONSTRAINT IF EXISTS fk_st_member;
-ALTER TABLE IF EXISTS ONLY public.score_transaction DROP CONSTRAINT IF EXISTS fk_st_invoice;
-ALTER TABLE IF EXISTS ONLY public.schedule_seat DROP CONSTRAINT IF EXISTS fk_ss_seat;
-ALTER TABLE IF EXISTS ONLY public.schedule_seat DROP CONSTRAINT IF EXISTS fk_ss_schedule;
-ALTER TABLE IF EXISTS ONLY public.schedule_seat DROP CONSTRAINT IF EXISTS fk_ss_account;
-ALTER TABLE IF EXISTS ONLY public.seat DROP CONSTRAINT IF EXISTS fk_seat_room;
-ALTER TABLE IF EXISTS ONLY public.seat DROP CONSTRAINT IF EXISTS fk_seat_pair;
-ALTER TABLE IF EXISTS ONLY public.schedule DROP CONSTRAINT IF EXISTS fk_schedule_version;
-ALTER TABLE IF EXISTS ONLY public.schedule DROP CONSTRAINT IF EXISTS fk_schedule_room;
-ALTER TABLE IF EXISTS ONLY public.schedule DROP CONSTRAINT IF EXISTS fk_schedule_movie;
-ALTER TABLE IF EXISTS ONLY public.room_format DROP CONSTRAINT IF EXISTS fk_rf_version;
-ALTER TABLE IF EXISTS ONLY public.room_format DROP CONSTRAINT IF EXISTS fk_rf_room;
-ALTER TABLE IF EXISTS ONLY public.payment DROP CONSTRAINT IF EXISTS fk_payment_invoice;
-ALTER TABLE IF EXISTS ONLY public.movie_version DROP CONSTRAINT IF EXISTS fk_mv_version;
-ALTER TABLE IF EXISTS ONLY public.movie_version DROP CONSTRAINT IF EXISTS fk_mv_movie;
-ALTER TABLE IF EXISTS ONLY public.movie_type DROP CONSTRAINT IF EXISTS fk_mt_type;
-ALTER TABLE IF EXISTS ONLY public.movie_type DROP CONSTRAINT IF EXISTS fk_mt_movie;
-ALTER TABLE IF EXISTS ONLY public.member DROP CONSTRAINT IF EXISTS fk_member_account;
-ALTER TABLE IF EXISTS ONLY public.invoice_seat DROP CONSTRAINT IF EXISTS fk_is_ss;
-ALTER TABLE IF EXISTS ONLY public.invoice_seat DROP CONSTRAINT IF EXISTS fk_is_invoice;
-ALTER TABLE IF EXISTS ONLY public.invoice DROP CONSTRAINT IF EXISTS fk_invoice_schedule;
-ALTER TABLE IF EXISTS ONLY public.invoice DROP CONSTRAINT IF EXISTS fk_invoice_promotion;
-ALTER TABLE IF EXISTS ONLY public.invoice DROP CONSTRAINT IF EXISTS fk_invoice_account;
-ALTER TABLE IF EXISTS ONLY public.employee DROP CONSTRAINT IF EXISTS fk_employee_account;
-ALTER TABLE IF EXISTS ONLY public.cancelled_ticket DROP CONSTRAINT IF EXISTS fk_ct_invoice;
-ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS fk_cp_food;
-ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS fk_cp_drink;
-ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS fk_cp_combo;
-ALTER TABLE IF EXISTS ONLY public.account DROP CONSTRAINT IF EXISTS fk_account_role;
+ALTER TABLE IF EXISTS ONLY public.score_transaction DROP CONSTRAINT IF EXISTS fk_st_member CASCADE;
+ALTER TABLE IF EXISTS ONLY public.score_transaction DROP CONSTRAINT IF EXISTS fk_st_invoice CASCADE;
+ALTER TABLE IF EXISTS ONLY public.schedule_seat DROP CONSTRAINT IF EXISTS fk_ss_seat CASCADE;
+ALTER TABLE IF EXISTS ONLY public.schedule_seat DROP CONSTRAINT IF EXISTS fk_ss_schedule CASCADE;
+ALTER TABLE IF EXISTS ONLY public.schedule_seat DROP CONSTRAINT IF EXISTS fk_ss_account CASCADE;
+ALTER TABLE IF EXISTS ONLY public.seat DROP CONSTRAINT IF EXISTS fk_seat_room CASCADE;
+ALTER TABLE IF EXISTS ONLY public.seat DROP CONSTRAINT IF EXISTS fk_seat_pair CASCADE;
+ALTER TABLE IF EXISTS ONLY public.schedule DROP CONSTRAINT IF EXISTS fk_schedule_version CASCADE;
+ALTER TABLE IF EXISTS ONLY public.schedule DROP CONSTRAINT IF EXISTS fk_schedule_room CASCADE;
+ALTER TABLE IF EXISTS ONLY public.schedule DROP CONSTRAINT IF EXISTS fk_schedule_movie CASCADE;
+ALTER TABLE IF EXISTS ONLY public.room_format DROP CONSTRAINT IF EXISTS fk_rf_version CASCADE;
+ALTER TABLE IF EXISTS ONLY public.room_format DROP CONSTRAINT IF EXISTS fk_rf_room CASCADE;
+ALTER TABLE IF EXISTS ONLY public.payment DROP CONSTRAINT IF EXISTS fk_payment_invoice CASCADE;
+ALTER TABLE IF EXISTS ONLY public.movie_version DROP CONSTRAINT IF EXISTS fk_mv_version CASCADE;
+ALTER TABLE IF EXISTS ONLY public.movie_version DROP CONSTRAINT IF EXISTS fk_mv_movie CASCADE;
+ALTER TABLE IF EXISTS ONLY public.movie_type DROP CONSTRAINT IF EXISTS fk_mt_type CASCADE;
+ALTER TABLE IF EXISTS ONLY public.movie_type DROP CONSTRAINT IF EXISTS fk_mt_movie CASCADE;
+ALTER TABLE IF EXISTS ONLY public.member DROP CONSTRAINT IF EXISTS fk_member_account CASCADE;
+ALTER TABLE IF EXISTS ONLY public.invoice_seat DROP CONSTRAINT IF EXISTS fk_is_ss CASCADE;
+ALTER TABLE IF EXISTS ONLY public.invoice_seat DROP CONSTRAINT IF EXISTS fk_is_invoice CASCADE;
+ALTER TABLE IF EXISTS ONLY public.invoice DROP CONSTRAINT IF EXISTS fk_invoice_schedule CASCADE;
+ALTER TABLE IF EXISTS ONLY public.invoice DROP CONSTRAINT IF EXISTS fk_invoice_promotion CASCADE;
+ALTER TABLE IF EXISTS ONLY public.invoice DROP CONSTRAINT IF EXISTS fk_invoice_account CASCADE;
+ALTER TABLE IF EXISTS ONLY public.employee DROP CONSTRAINT IF EXISTS fk_employee_account CASCADE;
+ALTER TABLE IF EXISTS ONLY public.cancelled_ticket DROP CONSTRAINT IF EXISTS fk_ct_invoice CASCADE;
+ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS fk_cp_food CASCADE;
+ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS fk_cp_drink CASCADE;
+ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS fk_cp_combo CASCADE;
+ALTER TABLE IF EXISTS ONLY public.account DROP CONSTRAINT IF EXISTS fk_account_role CASCADE;
 DROP INDEX IF EXISTS public.uq_food_name_active;
 DROP INDEX IF EXISTS public.uq_drink_name_active;
 DROP INDEX IF EXISTS public.uq_combo_name_active;
-ALTER TABLE IF EXISTS ONLY public.version DROP CONSTRAINT IF EXISTS version_version_name_key;
-ALTER TABLE IF EXISTS ONLY public.version DROP CONSTRAINT IF EXISTS version_pkey;
-ALTER TABLE IF EXISTS ONLY public.schedule_seat DROP CONSTRAINT IF EXISTS uq_schedule_seat;
-ALTER TABLE IF EXISTS ONLY public.type DROP CONSTRAINT IF EXISTS type_type_name_key;
-ALTER TABLE IF EXISTS ONLY public.type DROP CONSTRAINT IF EXISTS type_pkey;
-ALTER TABLE IF EXISTS ONLY public.seat DROP CONSTRAINT IF EXISTS seat_pkey;
-ALTER TABLE IF EXISTS ONLY public.score_transaction DROP CONSTRAINT IF EXISTS score_transaction_pkey;
-ALTER TABLE IF EXISTS ONLY public.schedule_seat DROP CONSTRAINT IF EXISTS schedule_seat_pkey;
-ALTER TABLE IF EXISTS ONLY public.schedule DROP CONSTRAINT IF EXISTS schedule_pkey;
-ALTER TABLE IF EXISTS ONLY public.room_format DROP CONSTRAINT IF EXISTS room_format_pkey;
-ALTER TABLE IF EXISTS ONLY public.role DROP CONSTRAINT IF EXISTS role_pkey;
-ALTER TABLE IF EXISTS ONLY public.promotion DROP CONSTRAINT IF EXISTS promotion_pkey;
-ALTER TABLE IF EXISTS ONLY public.payment DROP CONSTRAINT IF EXISTS payment_pkey;
-ALTER TABLE IF EXISTS ONLY public.movie_version DROP CONSTRAINT IF EXISTS movie_version_pkey;
-ALTER TABLE IF EXISTS ONLY public.movie_type DROP CONSTRAINT IF EXISTS movie_type_pkey;
-ALTER TABLE IF EXISTS ONLY public.movie DROP CONSTRAINT IF EXISTS movie_pkey;
-ALTER TABLE IF EXISTS ONLY public.member DROP CONSTRAINT IF EXISTS member_pkey;
-ALTER TABLE IF EXISTS ONLY public.member DROP CONSTRAINT IF EXISTS member_account_id_key;
-ALTER TABLE IF EXISTS ONLY public.invoice_seat DROP CONSTRAINT IF EXISTS invoice_seat_pkey;
-ALTER TABLE IF EXISTS ONLY public.invoice DROP CONSTRAINT IF EXISTS invoice_pkey;
-ALTER TABLE IF EXISTS ONLY public.golden_hour_config DROP CONSTRAINT IF EXISTS golden_hour_config_pkey;
-ALTER TABLE IF EXISTS ONLY public.food DROP CONSTRAINT IF EXISTS food_pkey;
-ALTER TABLE IF EXISTS ONLY public.employee DROP CONSTRAINT IF EXISTS employee_pkey;
-ALTER TABLE IF EXISTS ONLY public.employee DROP CONSTRAINT IF EXISTS employee_account_id_key;
-ALTER TABLE IF EXISTS ONLY public.drink DROP CONSTRAINT IF EXISTS drink_pkey;
-ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS concession_price_pkey;
-ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS concession_price_food_id_size_key;
-ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS concession_price_drink_id_size_key;
-ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS concession_price_combo_id_size_key;
-ALTER TABLE IF EXISTS ONLY public.combo DROP CONSTRAINT IF EXISTS combo_pkey;
-ALTER TABLE IF EXISTS ONLY public.cinema_room DROP CONSTRAINT IF EXISTS cinema_room_pkey;
-ALTER TABLE IF EXISTS ONLY public.cinema_room DROP CONSTRAINT IF EXISTS cinema_room_cinema_room_name_key;
-ALTER TABLE IF EXISTS ONLY public.cancelled_ticket DROP CONSTRAINT IF EXISTS cancelled_ticket_pkey;
-ALTER TABLE IF EXISTS ONLY public.cancelled_ticket DROP CONSTRAINT IF EXISTS cancelled_ticket_invoice_id_key;
-ALTER TABLE IF EXISTS ONLY public.account DROP CONSTRAINT IF EXISTS account_username_key;
-ALTER TABLE IF EXISTS ONLY public.account DROP CONSTRAINT IF EXISTS account_pkey;
-ALTER TABLE IF EXISTS ONLY public.account DROP CONSTRAINT IF EXISTS account_phone_number_key;
-ALTER TABLE IF EXISTS ONLY public.account DROP CONSTRAINT IF EXISTS account_identity_card_key;
-ALTER TABLE IF EXISTS ONLY public.account DROP CONSTRAINT IF EXISTS account_email_key;
-ALTER TABLE IF EXISTS public.version ALTER COLUMN version_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.type ALTER COLUMN type_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.seat ALTER COLUMN seat_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.score_transaction ALTER COLUMN txn_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.schedule_seat ALTER COLUMN schedule_seat_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.schedule ALTER COLUMN schedule_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.role ALTER COLUMN role_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.promotion ALTER COLUMN promotion_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.payment ALTER COLUMN payment_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.invoice_seat ALTER COLUMN invoice_seat_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.invoice ALTER COLUMN invoice_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.golden_hour_config ALTER COLUMN golden_hour_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.food ALTER COLUMN food_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.drink ALTER COLUMN drink_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.concession_price ALTER COLUMN concession_price_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.combo ALTER COLUMN combo_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.cinema_room ALTER COLUMN cinema_room_id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.cancelled_ticket ALTER COLUMN cancelled_id DROP DEFAULT;
+ALTER TABLE IF EXISTS ONLY public.version DROP CONSTRAINT IF EXISTS version_version_name_key CASCADE;
+ALTER TABLE IF EXISTS ONLY public.version DROP CONSTRAINT IF EXISTS version_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.schedule_seat DROP CONSTRAINT IF EXISTS uq_schedule_seat CASCADE;
+ALTER TABLE IF EXISTS ONLY public.type DROP CONSTRAINT IF EXISTS type_type_name_key CASCADE;
+ALTER TABLE IF EXISTS ONLY public.type DROP CONSTRAINT IF EXISTS type_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.seat DROP CONSTRAINT IF EXISTS seat_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.score_transaction DROP CONSTRAINT IF EXISTS score_transaction_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.schedule_seat DROP CONSTRAINT IF EXISTS schedule_seat_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.schedule DROP CONSTRAINT IF EXISTS schedule_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.room_format DROP CONSTRAINT IF EXISTS room_format_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.role DROP CONSTRAINT IF EXISTS role_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.promotion DROP CONSTRAINT IF EXISTS promotion_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.payment DROP CONSTRAINT IF EXISTS payment_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.movie_version DROP CONSTRAINT IF EXISTS movie_version_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.movie_type DROP CONSTRAINT IF EXISTS movie_type_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.movie DROP CONSTRAINT IF EXISTS movie_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.member DROP CONSTRAINT IF EXISTS member_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.member DROP CONSTRAINT IF EXISTS member_account_id_key CASCADE;
+ALTER TABLE IF EXISTS ONLY public.invoice_seat DROP CONSTRAINT IF EXISTS invoice_seat_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.invoice DROP CONSTRAINT IF EXISTS invoice_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.golden_hour_config DROP CONSTRAINT IF EXISTS golden_hour_config_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.food DROP CONSTRAINT IF EXISTS food_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.employee DROP CONSTRAINT IF EXISTS employee_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.employee DROP CONSTRAINT IF EXISTS employee_account_id_key CASCADE;
+ALTER TABLE IF EXISTS ONLY public.drink DROP CONSTRAINT IF EXISTS drink_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS concession_price_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS concession_price_food_id_size_key CASCADE;
+ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS concession_price_drink_id_size_key CASCADE;
+ALTER TABLE IF EXISTS ONLY public.concession_price DROP CONSTRAINT IF EXISTS concession_price_combo_id_size_key CASCADE;
+ALTER TABLE IF EXISTS ONLY public.combo DROP CONSTRAINT IF EXISTS combo_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.cinema_room DROP CONSTRAINT IF EXISTS cinema_room_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.cinema_room DROP CONSTRAINT IF EXISTS cinema_room_cinema_room_name_key CASCADE;
+ALTER TABLE IF EXISTS ONLY public.cancelled_ticket DROP CONSTRAINT IF EXISTS cancelled_ticket_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.cancelled_ticket DROP CONSTRAINT IF EXISTS cancelled_ticket_invoice_id_key CASCADE;
+ALTER TABLE IF EXISTS ONLY public.account DROP CONSTRAINT IF EXISTS account_username_key CASCADE;
+ALTER TABLE IF EXISTS ONLY public.account DROP CONSTRAINT IF EXISTS account_pkey CASCADE;
+ALTER TABLE IF EXISTS ONLY public.account DROP CONSTRAINT IF EXISTS account_phone_number_key CASCADE;
+ALTER TABLE IF EXISTS ONLY public.account DROP CONSTRAINT IF EXISTS account_identity_card_key CASCADE;
+ALTER TABLE IF EXISTS ONLY public.account DROP CONSTRAINT IF EXISTS account_email_key CASCADE;
+ALTER TABLE IF EXISTS public.version ALTER COLUMN version_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.type ALTER COLUMN type_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.seat ALTER COLUMN seat_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.score_transaction ALTER COLUMN txn_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.schedule_seat ALTER COLUMN schedule_seat_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.schedule ALTER COLUMN schedule_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.role ALTER COLUMN role_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.promotion ALTER COLUMN promotion_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.payment ALTER COLUMN payment_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.invoice_seat ALTER COLUMN invoice_seat_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.invoice ALTER COLUMN invoice_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.golden_hour_config ALTER COLUMN golden_hour_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.food ALTER COLUMN food_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.drink ALTER COLUMN drink_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.concession_price ALTER COLUMN concession_price_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.combo ALTER COLUMN combo_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.cinema_room ALTER COLUMN cinema_room_id DROP IDENTITY IF EXISTS;
+ALTER TABLE IF EXISTS public.cancelled_ticket ALTER COLUMN cancelled_id DROP IDENTITY IF EXISTS;
 DROP SEQUENCE IF EXISTS public.version_version_id_seq;
 DROP TABLE IF EXISTS public.version;
 DROP SEQUENCE IF EXISTS public.type_type_id_seq;
@@ -178,7 +178,7 @@ CREATE TABLE public.account (
 );
 
 
-ALTER TABLE public.account OWNER TO postgres;
+
 
 --
 -- Name: cancelled_ticket; Type: TABLE; Schema: public; Owner: postgres
@@ -195,7 +195,7 @@ CREATE TABLE public.cancelled_ticket (
 );
 
 
-ALTER TABLE public.cancelled_ticket OWNER TO postgres;
+
 
 --
 -- Name: cancelled_ticket_cancelled_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -210,7 +210,7 @@ CREATE SEQUENCE public.cancelled_ticket_cancelled_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.cancelled_ticket_cancelled_id_seq OWNER TO postgres;
+
 
 --
 -- Name: cancelled_ticket_cancelled_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -231,7 +231,7 @@ CREATE TABLE public.cinema_room (
 );
 
 
-ALTER TABLE public.cinema_room OWNER TO postgres;
+
 
 --
 -- Name: cinema_room_cinema_room_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -246,7 +246,7 @@ CREATE SEQUENCE public.cinema_room_cinema_room_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.cinema_room_cinema_room_id_seq OWNER TO postgres;
+
 
 --
 -- Name: cinema_room_cinema_room_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -269,7 +269,7 @@ CREATE TABLE public.combo (
 );
 
 
-ALTER TABLE public.combo OWNER TO postgres;
+
 
 --
 -- Name: combo_combo_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -284,7 +284,7 @@ CREATE SEQUENCE public.combo_combo_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.combo_combo_id_seq OWNER TO postgres;
+
 
 --
 -- Name: combo_combo_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -310,7 +310,7 @@ CREATE TABLE public.concession_price (
 );
 
 
-ALTER TABLE public.concession_price OWNER TO postgres;
+
 
 --
 -- Name: concession_price_concession_price_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -325,7 +325,7 @@ CREATE SEQUENCE public.concession_price_concession_price_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.concession_price_concession_price_id_seq OWNER TO postgres;
+
 
 --
 -- Name: concession_price_concession_price_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -348,7 +348,7 @@ CREATE TABLE public.drink (
 );
 
 
-ALTER TABLE public.drink OWNER TO postgres;
+
 
 --
 -- Name: drink_drink_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -363,7 +363,7 @@ CREATE SEQUENCE public.drink_drink_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.drink_drink_id_seq OWNER TO postgres;
+
 
 --
 -- Name: drink_drink_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -382,7 +382,7 @@ CREATE TABLE public.employee (
 );
 
 
-ALTER TABLE public.employee OWNER TO postgres;
+
 
 --
 -- Name: food; Type: TABLE; Schema: public; Owner: postgres
@@ -398,7 +398,7 @@ CREATE TABLE public.food (
 );
 
 
-ALTER TABLE public.food OWNER TO postgres;
+
 
 --
 -- Name: food_food_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -413,7 +413,7 @@ CREATE SEQUENCE public.food_food_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.food_food_id_seq OWNER TO postgres;
+
 
 --
 -- Name: food_food_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -436,7 +436,7 @@ CREATE TABLE public.golden_hour_config (
 );
 
 
-ALTER TABLE public.golden_hour_config OWNER TO postgres;
+
 
 --
 -- Name: golden_hour_config_golden_hour_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -451,7 +451,7 @@ CREATE SEQUENCE public.golden_hour_config_golden_hour_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.golden_hour_config_golden_hour_id_seq OWNER TO postgres;
+
 
 --
 -- Name: golden_hour_config_golden_hour_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -478,7 +478,7 @@ CREATE TABLE public.invoice (
 );
 
 
-ALTER TABLE public.invoice OWNER TO postgres;
+
 
 --
 -- Name: invoice_invoice_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -493,7 +493,7 @@ CREATE SEQUENCE public.invoice_invoice_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.invoice_invoice_id_seq OWNER TO postgres;
+
 
 --
 -- Name: invoice_invoice_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -514,7 +514,7 @@ CREATE TABLE public.invoice_seat (
 );
 
 
-ALTER TABLE public.invoice_seat OWNER TO postgres;
+
 
 --
 -- Name: invoice_seat_invoice_seat_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -529,7 +529,7 @@ CREATE SEQUENCE public.invoice_seat_invoice_seat_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.invoice_seat_invoice_seat_id_seq OWNER TO postgres;
+
 
 --
 -- Name: invoice_seat_invoice_seat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -549,7 +549,7 @@ CREATE TABLE public.member (
 );
 
 
-ALTER TABLE public.member OWNER TO postgres;
+
 
 --
 -- Name: movie; Type: TABLE; Schema: public; Owner: postgres
@@ -573,7 +573,7 @@ CREATE TABLE public.movie (
 );
 
 
-ALTER TABLE public.movie OWNER TO postgres;
+
 
 --
 -- Name: movie_type; Type: TABLE; Schema: public; Owner: postgres
@@ -585,7 +585,7 @@ CREATE TABLE public.movie_type (
 );
 
 
-ALTER TABLE public.movie_type OWNER TO postgres;
+
 
 --
 -- Name: movie_version; Type: TABLE; Schema: public; Owner: postgres
@@ -597,7 +597,7 @@ CREATE TABLE public.movie_version (
 );
 
 
-ALTER TABLE public.movie_version OWNER TO postgres;
+
 
 --
 -- Name: payment; Type: TABLE; Schema: public; Owner: postgres
@@ -614,7 +614,7 @@ CREATE TABLE public.payment (
 );
 
 
-ALTER TABLE public.payment OWNER TO postgres;
+
 
 --
 -- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -629,7 +629,7 @@ CREATE SEQUENCE public.payment_payment_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.payment_payment_id_seq OWNER TO postgres;
+
 
 --
 -- Name: payment_payment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -675,7 +675,7 @@ CREATE TABLE public.promotion (
 );
 
 
-ALTER TABLE public.promotion OWNER TO postgres;
+
 
 --
 -- Name: promotion_promotion_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -690,7 +690,7 @@ CREATE SEQUENCE public.promotion_promotion_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.promotion_promotion_id_seq OWNER TO postgres;
+
 
 --
 -- Name: promotion_promotion_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -709,7 +709,7 @@ CREATE TABLE public.role (
 );
 
 
-ALTER TABLE public.role OWNER TO postgres;
+
 
 --
 -- Name: role_role_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -724,7 +724,7 @@ CREATE SEQUENCE public.role_role_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.role_role_id_seq OWNER TO postgres;
+
 
 --
 -- Name: role_role_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -743,7 +743,7 @@ CREATE TABLE public.room_format (
 );
 
 
-ALTER TABLE public.room_format OWNER TO postgres;
+
 
 --
 -- Name: schedule; Type: TABLE; Schema: public; Owner: postgres
@@ -762,7 +762,7 @@ CREATE TABLE public.schedule (
 );
 
 
-ALTER TABLE public.schedule OWNER TO postgres;
+
 
 --
 -- Name: schedule_schedule_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -777,7 +777,7 @@ CREATE SEQUENCE public.schedule_schedule_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.schedule_schedule_id_seq OWNER TO postgres;
+
 
 --
 -- Name: schedule_schedule_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -801,7 +801,7 @@ CREATE TABLE public.schedule_seat (
 );
 
 
-ALTER TABLE public.schedule_seat OWNER TO postgres;
+
 
 --
 -- Name: COLUMN schedule_seat.seat_status; Type: COMMENT; Schema: public; Owner: postgres
@@ -823,7 +823,7 @@ CREATE SEQUENCE public.schedule_seat_schedule_seat_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.schedule_seat_schedule_seat_id_seq OWNER TO postgres;
+
 
 --
 -- Name: schedule_seat_schedule_seat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -847,7 +847,7 @@ CREATE TABLE public.score_transaction (
 );
 
 
-ALTER TABLE public.score_transaction OWNER TO postgres;
+
 
 --
 -- Name: score_transaction_txn_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -862,7 +862,7 @@ CREATE SEQUENCE public.score_transaction_txn_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.score_transaction_txn_id_seq OWNER TO postgres;
+
 
 --
 -- Name: score_transaction_txn_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -886,7 +886,7 @@ CREATE TABLE public.seat (
 );
 
 
-ALTER TABLE public.seat OWNER TO postgres;
+
 
 --
 -- Name: seat_seat_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -901,7 +901,7 @@ CREATE SEQUENCE public.seat_seat_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.seat_seat_id_seq OWNER TO postgres;
+
 
 --
 -- Name: seat_seat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -920,7 +920,7 @@ CREATE TABLE public.type (
 );
 
 
-ALTER TABLE public.type OWNER TO postgres;
+
 
 --
 -- Name: type_type_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -935,7 +935,7 @@ CREATE SEQUENCE public.type_type_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.type_type_id_seq OWNER TO postgres;
+
 
 --
 -- Name: type_type_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -957,7 +957,7 @@ CREATE TABLE public.version (
 );
 
 
-ALTER TABLE public.version OWNER TO postgres;
+
 
 --
 -- Name: version_version_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -972,7 +972,7 @@ CREATE SEQUENCE public.version_version_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.version_version_id_seq OWNER TO postgres;
+
 
 --
 -- Name: version_version_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -2836,5 +2836,5 @@ ALTER TABLE ONLY public.score_transaction
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 9a4lcqsLl9UtZDdikrvqvPKoYrXoRxgDryLT8b5ZjV8KyO9rAErIACWcxrNecjn
+-- \unrestrict 9a4lcqsLl9UtZDdikrvqvPKoYrXoRxgDryLT8b5ZjV8KyO9rAErIACWcxrNecjn
 

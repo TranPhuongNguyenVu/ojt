@@ -27,4 +27,7 @@ public class ComboRequestDTO {
     @NotEmpty(message = "At least one price is required")
     @Valid
     private List<ConcessionPriceRequestDTO> prices;
+
+    @Valid
+    private List<ComboItemRequestDTO> items;
 }

@@ -5,10 +5,13 @@ import MovieService from '../../services/MovieService';
 import ScheduleService from '../../services/ScheduleService';
 import BookingService from '../../services/BookingService';
 import CustomerService from '../../services/CustomerService';
+import ConcessionService from '../../services/ConcessionService';
 import { getMovieImageUrl } from '../../utils/movieImageUtils';
 import { compareSeatsByPosition, getSeatLabel } from '../../utils/seatUtils';
+import { BOOKING_CONCESSION_LABELS as CL } from '../../constants/labels';
 
 const POINT_VALUE = 1000;
+const CONCESSION_SIZE_LABELS = { NONE: CL.sizeNone, S: CL.sizeS, M: CL.sizeM, L: CL.sizeL };
 
 const EmployeeTicketInformationPage = () => {
   const { scheduleId } = useParams();
@@ -32,6 +35,48 @@ const EmployeeTicketInformationPage = () => {
 
   const [pointsToUse, setPointsToUse] = useState(0);
   const [pointsInput, setPointsInput] = useState('');
+
+  const [concessionTab, setConcessionTab] = useState('food');
+  const [foods, setFoods] = useState([]);
+  const [drinks, setDrinks] = useState([]);
+  const [combos, setCombos] = useState([]);
+  const [concessionSelections, setConcessionSelections] = useState({});
+
+  useEffect(() => {
+    Promise.all([
+      ConcessionService.getAllFoods(),
+      ConcessionService.getAllDrinks(),
+      ConcessionService.getAllCombos(),
+    ])
+      .then(([foodRes, drinkRes, comboRes]) => {
+        setFoods(foodRes.data.data || []);
+        setDrinks(drinkRes.data.data || []);
+        setCombos(comboRes.data.data || []);
+      })
+      .catch((err) => console.error('Lỗi tải danh sách bắp nước:', err));
+  }, []);
+
+  const CONCESSION_TABS = [
+    { key: 'food', type: 'FOOD', label: CL.tabFood, items: foods, idKey: 'foodId', nameKey: 'foodName' },
+    { key: 'drink', type: 'DRINK', label: CL.tabDrink, items: drinks, idKey: 'drinkId', nameKey: 'drinkName' },
+    { key: 'combo', type: 'COMBO', label: CL.tabCombo, items: combos, idKey: 'comboId', nameKey: 'comboName' },
+  ];
+
+  const updateConcessionQty = (itemType, itemId, size, name, unitPrice, delta) => {
+    const key = `${itemType}-${itemId}-${size}`;
+    setConcessionSelections((prev) => {
+      const currentQty = prev[key]?.quantity || 0;
+      const nextQty = Math.max(0, currentQty + delta);
+      if (nextQty === 0) {
+        const { [key]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [key]: { itemType, itemId, size, name, unitPrice, quantity: nextQty } };
+    });
+  };
+
+  const concessionLines = Object.values(concessionSelections);
+  const concessionsSubtotal = concessionLines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
 
   useEffect(() => {
     if (!selectedSeats.length || !scheduleId) {
@@ -107,7 +152,7 @@ const EmployeeTicketInformationPage = () => {
 
   const activePointsToUse = Math.min(pointsToUse, maxPointsAllowed);
   const pointsDiscount = activePointsToUse * POINT_VALUE;
-  const payableTotal = Math.max(0, totalAmount - pointsDiscount);
+  const payableTotal = Math.max(0, totalAmount - pointsDiscount) + concessionsSubtotal;
   const remainingPoints = member ? Math.max(0, (member.score || 0) - activePointsToUse) : 0;
 
   const scoreInsufficient =
@@ -174,6 +219,12 @@ const EmployeeTicketInformationPage = () => {
       seatIds,
       memberId: member?.memberId || null,
       pointsToUse: member ? activePointsToUse : 0,
+      concessions: concessionLines.map((line) => ({
+        itemType: line.itemType,
+        itemId: line.itemId,
+        size: line.size,
+        quantity: line.quantity,
+      })),
     };
 
     BookingService.employeeConfirmBooking(scheduleId, bookingData)
@@ -317,6 +368,81 @@ const EmployeeTicketInformationPage = () => {
                 <span className="text-2xl font-black text-[#C00000] dark:text-[#ff4d57]">{formattedTotal} VNĐ</span>
               </div>
             </div>
+          </div>
+
+          {/* Bắp nước tại quầy */}
+          <div className="bg-white border border-gray-200/80 rounded-2xl shadow-sm p-6 space-y-4">
+            <h2 className="text-sm font-black text-gray-800 uppercase tracking-wider">{CL.stepTitle}</h2>
+
+            <div className="flex gap-2">
+              {CONCESSION_TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setConcessionTab(tab.key)}
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                    concessionTab === tab.key
+                      ? 'bg-gray-900 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="divide-y divide-gray-100">
+              {CONCESSION_TABS.filter((tab) => tab.key === concessionTab).map((tab) => (
+                tab.items.length === 0 ? (
+                  <p key={tab.key} className="text-xs text-gray-400 font-semibold text-center py-6">{CL.emptyList}</p>
+                ) : (
+                  tab.items.map((item) => (
+                    <div key={item[tab.idKey]} className="py-3 flex items-center gap-4">
+                      <span className="flex-1 text-sm font-black text-gray-800 truncate">{item[tab.nameKey]}</span>
+                      <div className="flex flex-col gap-2">
+                        {(item.prices || []).map((priceRow) => {
+                          const unitPrice = parseFloat(priceRow.price) || 0;
+                          const key = `${tab.type}-${item[tab.idKey]}-${priceRow.size}`;
+                          const qty = concessionSelections[key]?.quantity || 0;
+                          return (
+                            <div key={key} className="flex items-center justify-between gap-3">
+                              <span className="text-[11px] font-bold text-gray-500 w-28">
+                                {CONCESSION_SIZE_LABELS[priceRow.size] || priceRow.size} · {new Intl.NumberFormat('vi-VN').format(unitPrice)}{CL.currencyUnit}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => updateConcessionQty(tab.type, item[tab.idKey], priceRow.size, item[tab.nameKey], unitPrice, -1)}
+                                  disabled={qty <= 0}
+                                  className="w-7 h-7 rounded-full border border-gray-300 text-gray-600 font-black disabled:opacity-30 hover:bg-gray-100 transition-colors cursor-pointer"
+                                >
+                                  −
+                                </button>
+                                <span className="w-5 text-center text-sm font-black text-gray-800">{qty}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => updateConcessionQty(tab.type, item[tab.idKey], priceRow.size, item[tab.nameKey], unitPrice, 1)}
+                                  className="w-7 h-7 rounded-full border border-gray-300 text-gray-600 font-black hover:bg-gray-100 transition-colors cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))
+                )
+              ))}
+            </div>
+
+            {concessionLines.length > 0 && (
+              <div className="border-t border-gray-100 pt-3 flex items-center justify-between">
+                <span className="text-xs font-black text-gray-500 uppercase tracking-wider">{CL.concessionsSubtotalLabel}</span>
+                <span className="text-sm font-black text-[#C00000]">{new Intl.NumberFormat('vi-VN').format(concessionsSubtotal)} VNĐ</span>
+              </div>
+            )}
           </div>
 
           {/* AC-02 to AC-06: Member lookup & score conversion */}

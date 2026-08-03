@@ -22,7 +22,7 @@ const EmployeePromotionsPage = () => {
   useEffect(() => {
     setLoading(true);
     setError("");
-    PromotionService.getAll()
+    PromotionService.getActive()
       .then((response) => {
         setPromotions(response.data.data || []);
       })

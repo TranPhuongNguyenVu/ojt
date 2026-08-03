@@ -3,7 +3,6 @@ package org.example.be.service;
 import org.example.be.dto.*;
 import org.example.be.entity.CinemaRoom;
 import org.example.be.enums.CinemaRoomStatus;
-import org.example.be.entity.Schedule;
 import org.example.be.entity.Seat;
 import org.example.be.entity.Version;
 import org.example.be.exception.GlobalExceptionHandler.InvalidFormatCombinationException;
@@ -18,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -46,9 +46,6 @@ public class CinemaRoomService {
 
     @Autowired
     private SeatService seatService;
-
-    @Autowired
-    private ScheduleService scheduleService;
 
     public List<CinemaRoomDTO> getRoomsByFormat(Integer versionId) {
         return cinemaRoomRepository
@@ -124,7 +121,7 @@ public class CinemaRoomService {
     public CinemaRoomDTO updateInfo(Integer id, UpdateCinemaRoomRequest request) {
         CinemaRoom room = findRoomOrThrow(id);
 
-        if (scheduleRepository.existsByCinemaRoomId(id)) {
+        if (scheduleRepository.existsUpcomingByCinemaRoomId(id, LocalDateTime.now())) {
             throw new IllegalStateException("Không thể cập nhật phòng chiếu đang có lịch chiếu.");
         }
 
@@ -151,12 +148,8 @@ public class CinemaRoomService {
     public CinemaRoomDTO deactivate(Integer id) {
         CinemaRoom room = findRoomOrThrow(id);
 
-        List<Schedule> blocking = scheduleRepository.findActiveByCinemaRoomId(id).stream()
-                .filter(s -> !scheduleService.canCancelOrDelete(s))
-                .collect(Collectors.toList());
-        if (!blocking.isEmpty()) {
-            throw new IllegalStateException(
-                    "Không thể ngừng hoạt động phòng chiếu: còn suất chiếu trong vòng 2 ngày tới chưa thể hủy.");
+        if (scheduleRepository.existsUpcomingByCinemaRoomId(id, LocalDateTime.now())) {
+            throw new IllegalStateException("Không thể ngừng hoạt động phòng chiếu đang có lịch chiếu.");
         }
 
         room.setStatus(CinemaRoomStatus.INACTIVE);

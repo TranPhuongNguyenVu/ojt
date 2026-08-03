@@ -36,31 +36,31 @@ public class DrinkController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ApiResponse<DrinkDTO> createDrink(@Valid @RequestBody DrinkRequestDTO requestDTO) {
         return ApiResponse.success("Drink created", drinkService.create(requestDTO));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ApiResponse<DrinkDTO> updateDrink(@PathVariable Integer id, @Valid @RequestBody DrinkRequestDTO requestDTO) {
         return ApiResponse.success("Drink updated", drinkService.update(id, requestDTO));
     }
 
     @PatchMapping("/{id}/activate")
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ApiResponse<DrinkDTO> activateDrink(@PathVariable Integer id) {
         return ApiResponse.success("Drink restored", drinkService.activate(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ApiResponse<DrinkDTO> deleteDrink(@PathVariable Integer id) {
         return ApiResponse.success("Drink deleted", drinkService.delete(id));
     }
 
     private boolean isAdmin(Authentication auth) {
         return auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_Admin"));
+                .anyMatch(a -> a.getAuthority().equals("ROLE_Admin") || a.getAuthority().equals("ROLE_SystemAdmin"));
     }
 }

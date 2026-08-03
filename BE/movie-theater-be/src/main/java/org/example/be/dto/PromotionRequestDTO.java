@@ -60,4 +60,5 @@ public class PromotionRequestDTO {
     private LocalTime applicableStartTime;
     private LocalTime applicableEndTime;
     private Boolean birthdayOnly;
+    private Boolean allowMultipleUsePerCustomer;
 }

@@ -11,27 +11,33 @@ import java.util.Optional;
 
 @Repository
 public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
-    @Query(value = "SELECT count(*) > 0 FROM SCHEDULE WHERE MOVIE_ID = :movieId AND STATUS <> 'DELETED'", nativeQuery = true)
-    boolean existsByMovieId(@Param("movieId") String movieId);
+    /** True if the movie has EVER had a schedule created (any status, including DELETED) — used to gate movie DELETE to movies that were never scheduled. */
+    @Query(value = "SELECT count(*) > 0 FROM SCHEDULE WHERE MOVIE_ID = :movieId", nativeQuery = true)
+    boolean existsAnyByMovieId(@Param("movieId") String movieId);
 
-    @Query("SELECT s FROM Schedule s LEFT JOIN FETCH s.cinemaRoom WHERE s.movieId = :movieId")
+    /** True if the movie still has an upcoming, non-cancelled showtime — used to block edits without permanently locking the movie once every schedule has ended. */
+    @Query("SELECT COUNT(s) > 0 FROM Schedule s WHERE s.movieId = :movieId " +
+            "AND s.status NOT IN (org.example.be.enums.ScheduleStatus.CANCELLED, org.example.be.enums.ScheduleStatus.DELETED) " +
+            "AND s.endTime > :now")
+    boolean existsUpcomingByMovieId(@Param("movieId") String movieId, @Param("now") java.time.LocalDateTime now);
+
+    /** Schedules selectable for booking (movie showtime picker) — excludes CANCELLED/DELETED. */
+    @Query("SELECT s FROM Schedule s LEFT JOIN FETCH s.cinemaRoom WHERE s.movieId = :movieId " +
+            "AND s.status NOT IN (org.example.be.enums.ScheduleStatus.CANCELLED, org.example.be.enums.ScheduleStatus.DELETED)")
     List<Schedule> findByMovieId(@Param("movieId") String movieId);
 
     @Query("SELECT s FROM Schedule s LEFT JOIN FETCH s.cinemaRoom WHERE s.cinemaRoomId = :cinemaRoomId")
     List<Schedule> findByCinemaRoomId(@Param("cinemaRoomId") Integer cinemaRoomId);
 
-    boolean existsByMovieIdAndStartTimeAfter(String movieId, java.time.LocalDateTime startTime);
+    /** True if the room still has an upcoming, non-cancelled showtime — used to block edits without permanently locking the room once every schedule has ended. */
+    @Query("SELECT COUNT(s) > 0 FROM Schedule s WHERE s.cinemaRoomId = :cinemaRoomId " +
+            "AND s.status NOT IN (org.example.be.enums.ScheduleStatus.CANCELLED, org.example.be.enums.ScheduleStatus.DELETED) " +
+            "AND s.endTime > :now")
+    boolean existsUpcomingByCinemaRoomId(@Param("cinemaRoomId") Integer cinemaRoomId, @Param("now") java.time.LocalDateTime now);
 
-    @Query(value = "SELECT count(*) > 0 FROM SCHEDULE WHERE CINEMA_ROOM_ID = :cinemaRoomId AND STATUS <> 'DELETED'", nativeQuery = true)
-    boolean existsByCinemaRoomId(@Param("cinemaRoomId") Integer cinemaRoomId);
-
-    /** Schedules still relevant to a movie (i.e. not soft-deleted) — used to block edit/delete of the movie. */
+    /** Schedules still relevant to a movie (i.e. not soft-deleted) — used for movie overlap validation. */
     @Query("SELECT s FROM Schedule s WHERE s.movieId = :movieId AND s.status <> org.example.be.enums.ScheduleStatus.DELETED")
     List<Schedule> findActiveByMovieId(@Param("movieId") String movieId);
-
-    /** Schedules still relevant to a room (i.e. not soft-deleted) — used to block edit/delete of the room. */
-    @Query("SELECT s FROM Schedule s WHERE s.cinemaRoomId = :cinemaRoomId AND s.status <> org.example.be.enums.ScheduleStatus.DELETED")
-    List<Schedule> findActiveByCinemaRoomId(@Param("cinemaRoomId") Integer cinemaRoomId);
 
     Optional<Schedule> findByScheduleIdAndStatusNotIn(Integer scheduleId, List<ScheduleStatus> statuses);
 

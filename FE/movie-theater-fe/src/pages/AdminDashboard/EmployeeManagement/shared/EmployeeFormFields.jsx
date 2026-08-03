@@ -48,7 +48,7 @@ const Field = ({ label, required, icon: Icon, error, children }) => (
     </label>
     <div className="relative">
       {Icon && (
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none">
           <Icon size={16} />
         </span>
       )}
@@ -196,7 +196,7 @@ const EmployeeFormFields = ({ formData, onChange, mode = "add", errors = {} }) =
             />
           </Field>
 
-          <div className="flex items-center p-3 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-center p-3 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30 rounded-lg">
             <span className="leading-relaxed">
               💡 Để trống mật khẩu nếu không muốn thay đổi tài khoản đăng nhập của nhân viên.
             </span>
@@ -205,7 +205,7 @@ const EmployeeFormFields = ({ formData, onChange, mode = "add", errors = {} }) =
       )}
 
       {isAdd && (
-        <div className="md:col-span-2 flex items-center p-3 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg">
+        <div className="md:col-span-2 flex items-center p-3 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30 rounded-lg">
           <span className="leading-relaxed">
             💡 Tài khoản nhân viên sẽ dùng tên đăng nhập và mật khẩu bạn nhập để đăng nhập hệ thống.
           </span>
@@ -238,7 +238,7 @@ const EmployeeFormFields = ({ formData, onChange, mode = "add", errors = {} }) =
               onChange={onChange}
               disabled={!formData.province}
               required={isAdd}
-              className={`${fieldSelectClass} disabled:bg-gray-50 disabled:cursor-not-allowed`}
+              className={`${fieldSelectClass} disabled:bg-gray-50 dark:disabled:bg-gray-800/40 disabled:cursor-not-allowed`}
             >
               <option value="">Chọn Quận/Huyện...</option>
               {formData.province &&

@@ -25,12 +25,12 @@ const NumberStepper = ({ label, value, onChange, disabled = false, required = fa
   };
 
   const buttonCls =
-    "flex items-center justify-center w-9 h-9 shrink-0 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer";
+    "flex items-center justify-center w-9 h-9 shrink-0 rounded-lg bg-slate-200 dark:bg-gray-800 text-slate-700 dark:text-gray-300 hover:bg-slate-300 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer";
 
   return (
     <div className="space-y-1">
-      <label className="text-xs font-bold text-slate-500 uppercase">
-        {label} {required && <span className="text-red-600">{COMMON_LABELS.requiredMark}</span>}
+      <label className="text-xs font-bold text-slate-500 dark:text-gray-400 uppercase">
+        {label} {required && <span className="text-red-600 dark:text-red-400">{COMMON_LABELS.requiredMark}</span>}
       </label>
       <div className="flex items-center gap-2">
         <button
@@ -49,7 +49,7 @@ const NumberStepper = ({ label, value, onChange, disabled = false, required = fa
           disabled={disabled}
           value={value}
           onChange={handleTextChange}
-          className="w-full bg-slate-100 border-none rounded-lg px-3 py-2.5 text-sm text-center font-bold focus:outline-none focus:ring-1 focus:ring-slate-300 disabled:opacity-60"
+          className="w-full bg-slate-100 dark:bg-gray-800/60 dark:text-white border-none rounded-lg px-3 py-2.5 text-sm text-center font-bold focus:outline-none focus:ring-1 focus:ring-slate-300 dark:focus:ring-gray-600 disabled:opacity-60"
         />
         <button
           type="button"

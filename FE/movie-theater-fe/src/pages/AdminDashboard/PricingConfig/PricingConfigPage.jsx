@@ -47,35 +47,35 @@ const conflictInfo = (error) => {
 };
 
 const inputClass =
-  "block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm";
-const labelClass = "block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1";
-const cardClass = "bg-white rounded-xl border border-gray-200 shadow-sm";
-const thClass = "px-4 py-3 text-left text-xs text-gray-500 font-bold tracking-wider whitespace-nowrap";
-const tdClass = "px-4 py-3 text-sm text-gray-700";
+  "block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm";
+const labelClass = "block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1";
+const cardClass = "bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm";
+const thClass = "px-4 py-3 text-left text-xs text-gray-500 dark:text-gray-400 font-bold tracking-wider whitespace-nowrap";
+const tdClass = "px-4 py-3 text-sm text-gray-700 dark:text-gray-300";
 
 const ConfirmForceDialog = ({ conflict, onConfirm, onCancel, isSubmitting }) => (
   <ModalShell title="Cảnh báo thay đổi giá" onClose={onCancel} maxWidth="max-w-md">
     <div className="p-6 space-y-4">
       <div className="flex flex-col items-center text-center gap-3">
-        <div className="p-3 rounded-full bg-amber-50 text-amber-500">
+        <div className="p-3 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-500 dark:text-amber-300">
           <AlertTriangle size={28} />
         </div>
-        <p className="text-sm text-gray-700 font-semibold">
+        <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold">
           {conflict.affected != null
             ? `Có ${conflict.affected} suất chiếu trong tương lai bị ảnh hưởng bởi thay đổi này.`
             : conflict.message}
         </p>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           Vé chưa bán của các suất đó sẽ áp dụng giá mới ngay. Vé đã bán giữ nguyên giá tại thời điểm thanh toán.
         </p>
       </div>
     </div>
-    <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100">
+    <div className="bg-gray-50 dark:bg-gray-800/60 px-6 py-4 flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800">
       <button
         type="button"
         onClick={onCancel}
         disabled={isSubmitting}
-        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60"
+        className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm disabled:opacity-60"
       >
         Hủy
       </button>
@@ -351,60 +351,60 @@ const PricingConfigPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full py-24 text-gray-400">
+      <div className="flex items-center justify-center h-full py-24 text-gray-400 dark:text-gray-500">
         <Loader2 size={28} className="animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      <header className="px-8 py-5 bg-white border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+      <header className="px-8 py-5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
           <BadgeDollarSign size={22} className="text-[#C00000]" />
           Cấu hình giá vé
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Giá vé = giá cơ bản theo định dạng + phụ thu ghế + phụ thu giờ vàng (tính tại thời điểm đặt vé).
         </p>
       </header>
 
       <main className="flex-1 overflow-y-auto p-8 space-y-6">
         {errorMessage && (
-          <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 text-red-700 text-sm font-semibold rounded-lg">
+          <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-300 text-sm font-semibold rounded-lg">
             <AlertTriangle size={18} />
             {errorMessage}
           </div>
         )}
         {successMessage && (
-          <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 text-green-700 text-sm font-semibold rounded-lg">
+          <div className="flex items-center gap-2 p-4 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-500/30 text-green-700 dark:text-green-300 text-sm font-semibold rounded-lg">
             <CheckCircle2 size={18} />
             {successMessage}
           </div>
         )}
 
         <section className={cardClass}>
-          <div className="px-6 pt-5 pb-3 border-b border-gray-100">
-            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+          <div className="px-6 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
               <BadgeDollarSign size={16} className="text-[#C00000]" />
               Giá cơ bản theo định dạng chiếu
             </h2>
           </div>
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-50">
+              <tr className="bg-gray-50 dark:bg-gray-800/60">
                 <th className={thClass}>Định dạng</th>
                 <th className={thClass}>Giá cơ bản</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {sortedVersionsByPrice.map((version) => {
                 const isEditing = editingFormatId === version.versionId;
                 const isSaving = savingFormatId === version.versionId;
                 return (
-                  <tr key={version.versionId} className="hover:bg-gray-50 transition-colors">
+                  <tr key={version.versionId} className="hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors">
                     <td className={tdClass}>
-                      <span className="inline-block px-2 py-0.5 text-xs font-bold rounded bg-indigo-100 text-indigo-700">
+                      <span className="inline-block px-2 py-0.5 text-xs font-bold rounded bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300">
                         {version.versionName}
                       </span>
                     </td>
@@ -428,7 +428,7 @@ const PricingConfigPage = () => {
                             type="button"
                             onClick={() => handleSaveFormat(version)}
                             disabled={isSaving || formatDraft === ""}
-                            className="p-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-md disabled:opacity-40"
+                            className="p-1.5 bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-md disabled:opacity-40"
                             title="Lưu"
                           >
                             {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
@@ -437,7 +437,7 @@ const PricingConfigPage = () => {
                             type="button"
                             onClick={cancelEditFormat}
                             disabled={isSaving}
-                            className="p-1.5 bg-gray-100 text-gray-500 hover:bg-gray-200 rounded-md"
+                            className="p-1.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md"
                             title="Hủy"
                           >
                             <X size={14} />
@@ -447,11 +447,11 @@ const PricingConfigPage = () => {
                         <button
                           type="button"
                           onClick={() => startEditFormat(version)}
-                          className="flex items-center gap-1.5 font-semibold text-gray-700 hover:text-[#C00000] transition-colors"
+                          className="flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-300 hover:text-[#C00000] transition-colors"
                           title="Bấm để chỉnh sửa"
                         >
                           {formatVnd(version.basePrice)}
-                          <Pencil size={12} className="text-gray-300" />
+                          <Pencil size={12} className="text-gray-300 dark:text-gray-600" />
                         </button>
                       )}
                     </td>
@@ -463,15 +463,15 @@ const PricingConfigPage = () => {
         </section>
 
         <section className={cardClass}>
-          <div className="px-6 pt-5 pb-3 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
-            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+          <div className="px-6 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between flex-wrap gap-3">
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
               <Armchair size={16} className="text-[#C00000]" />
               Phụ thu ghế theo định dạng
             </h2>
             <select
               value={selectedFormatId}
               onChange={(e) => setSelectedFormatId(e.target.value)}
-              className={`${inputClass} max-w-[260px] bg-white`}
+              className={`${inputClass} max-w-[260px] bg-white dark:bg-gray-800/60`}
             >
               <option value="">— Chọn định dạng chiếu —</option>
               {sortedVersionsByPrice.map((version) => (
@@ -483,25 +483,25 @@ const PricingConfigPage = () => {
           </div>
           <div>
             {!selectedFormatId ? (
-              <p className="text-sm text-gray-400 text-center py-8">
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
                 Chọn một định dạng chiếu để xem và chỉnh phụ thu ghế VIP / ghế đôi áp dụng cho mọi phòng thuộc định dạng đó.
               </p>
             ) : (
               <table className="w-full">
                 <thead>
-                  <tr className="bg-gray-50">
+                  <tr className="bg-gray-50 dark:bg-gray-800/60">
                     <th className={thClass}>Loại ghế</th>
                     <th className={thClass}>Phụ thu</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {seatTypeSummary.map((def) => {
                     const isEditing = editingSeatType === def.key;
                     const isSaving = savingSeatType === def.key;
                     return (
-                      <tr key={def.key} className="hover:bg-gray-50 transition-colors">
+                      <tr key={def.key} className="hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors">
                         <td className={tdClass}>
-                          <span className="inline-block px-2 py-0.5 text-xs font-bold rounded bg-indigo-100 text-indigo-700">
+                          <span className="inline-block px-2 py-0.5 text-xs font-bold rounded bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300">
                             {def.label}
                           </span>
                         </td>
@@ -525,7 +525,7 @@ const PricingConfigPage = () => {
                                 type="button"
                                 onClick={() => handleApplySeatTypeExtra(def.key)}
                                 disabled={isSaving || seatTypeDraft === ""}
-                                className="p-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-md disabled:opacity-40"
+                                className="p-1.5 bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-md disabled:opacity-40"
                                 title="Lưu"
                               >
                                 {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
@@ -534,7 +534,7 @@ const PricingConfigPage = () => {
                                 type="button"
                                 onClick={cancelEditSeatType}
                                 disabled={isSaving}
-                                className="p-1.5 bg-gray-100 text-gray-500 hover:bg-gray-200 rounded-md"
+                                className="p-1.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md"
                                 title="Hủy"
                               >
                                 <X size={14} />
@@ -544,11 +544,11 @@ const PricingConfigPage = () => {
                             <button
                               type="button"
                               onClick={() => startEditSeatType(def)}
-                              className="flex items-center gap-1.5 font-semibold text-gray-700 hover:text-[#C00000] transition-colors"
+                              className="flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-300 hover:text-[#C00000] transition-colors"
                               title="Bấm để chỉnh sửa"
                             >
                               {formatVnd(def.currentExtraPrice)}
-                              <Pencil size={12} className="text-gray-300" />
+                              <Pencil size={12} className="text-gray-300 dark:text-gray-600" />
                             </button>
                           )}
                         </td>
@@ -562,8 +562,8 @@ const PricingConfigPage = () => {
         </section>
 
         <section className={cardClass}>
-          <div className="px-6 pt-5 pb-3 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
-            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+          <div className="px-6 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between flex-wrap gap-3">
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
               <Clock3 size={16} className="text-[#C00000]" />
               Khung giờ vàng
             </h2>
@@ -577,11 +577,11 @@ const PricingConfigPage = () => {
             </button>
           </div>
           {goldenHours.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-10">Chưa có khung giờ vàng nào.</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-10">Chưa có khung giờ vàng nào.</p>
           ) : (
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50">
+                <tr className="bg-gray-50 dark:bg-gray-800/60">
                   <th className={thClass}>Khung giờ</th>
                   <th className={thClass}>Ngày áp dụng</th>
                   <th className={thClass}>Phụ thu</th>
@@ -589,9 +589,9 @@ const PricingConfigPage = () => {
                   <th className={`${thClass} w-32 text-center`}>Hành động</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {goldenHours.map((rule) => (
-                  <tr key={rule.goldenHourId} className="hover:bg-gray-50 transition-colors">
+                  <tr key={rule.goldenHourId} className="hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors">
                     <td className={`${tdClass} font-semibold`}>
                       {toHHMM(rule.startTime)} – {toHHMM(rule.endTime)}
                     </td>
@@ -600,7 +600,7 @@ const PricingConfigPage = () => {
                         {(rule.daysOfWeek || []).map((d) => (
                           <span
                             key={d}
-                            className="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded bg-gray-100 text-gray-600"
+                            className="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                           >
                             {dayLabel(d)}
                           </span>
@@ -616,8 +616,8 @@ const PricingConfigPage = () => {
                         onClick={() => handleGoldenToggleActive(rule)}
                         className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-colors ${
                           rule.active !== false
-                            ? "bg-green-100 text-green-700 hover:bg-green-200"
-                            : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                            ? "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
                         }`}
                       >
                         {rule.active !== false ? "Đang bật" : "Đang tắt"}
@@ -628,7 +628,7 @@ const PricingConfigPage = () => {
                         <button
                           type="button"
                           onClick={() => openGoldenEdit(rule)}
-                          className="text-blue-500 hover:text-blue-700 p-1.5 bg-blue-50 hover:bg-blue-100 rounded-md"
+                          className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 p-1.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-md"
                           title="Sửa"
                         >
                           <Pencil size={15} />
@@ -636,7 +636,7 @@ const PricingConfigPage = () => {
                         <button
                           type="button"
                           onClick={() => handleGoldenDelete(rule)}
-                          className="text-red-500 hover:text-red-700 p-1.5 bg-red-50 hover:bg-red-100 rounded-md"
+                          className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1.5 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-md"
                           title="Xóa"
                         >
                           <Trash2 size={15} />
@@ -694,7 +694,7 @@ const PricingConfigPage = () => {
                         className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${
                           checked
                             ? "bg-[#C00000] border-transparent text-white"
-                            : "bg-white border-gray-200 text-gray-600 hover:border-gray-400"
+                            : "bg-white dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
                         }`}
                       >
                         {day.label}
@@ -716,7 +716,7 @@ const PricingConfigPage = () => {
                   required
                 />
               </div>
-              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={goldenForm.active}
@@ -726,12 +726,12 @@ const PricingConfigPage = () => {
                 Kích hoạt khung giờ này
               </label>
             </div>
-            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100">
+            <div className="bg-gray-50 dark:bg-gray-800/60 px-6 py-4 flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800">
               <button
                 type="button"
                 onClick={() => setGoldenModal(null)}
                 disabled={savingGolden}
-                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60"
+                className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm disabled:opacity-60"
               >
                 Hủy
               </button>

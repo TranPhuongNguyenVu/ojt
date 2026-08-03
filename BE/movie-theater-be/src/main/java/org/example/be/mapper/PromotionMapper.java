@@ -37,6 +37,7 @@ public class PromotionMapper {
                 .applicableStartTime(promotion.getApplicableStartTime())
                 .applicableEndTime(promotion.getApplicableEndTime())
                 .birthdayOnly(promotion.getBirthdayOnly())
+                .allowMultipleUsePerCustomer(promotion.getAllowMultipleUsePerCustomer())
                 .expiringSoon(expiringSoon)
                 .daysRemaining(daysRemaining)
                 .build();
@@ -66,6 +67,8 @@ public class PromotionMapper {
         promotion.setApplicableStartTime(requestDTO.getApplicableStartTime());
         promotion.setApplicableEndTime(requestDTO.getApplicableEndTime());
         promotion.setBirthdayOnly(Boolean.TRUE.equals(requestDTO.getBirthdayOnly()));
+        promotion.setAllowMultipleUsePerCustomer(
+                requestDTO.getAllowMultipleUsePerCustomer() == null || requestDTO.getAllowMultipleUsePerCustomer());
     }
 
     private BigDecimal resolveDiscountLevel(PromotionRequestDTO requestDTO) {

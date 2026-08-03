@@ -115,23 +115,23 @@ const EmployeeForm = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] text-gray-500">
+      <div className="flex items-center justify-center min-h-[400px] text-gray-500 dark:text-gray-400">
         Đang tải thông tin...
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-50 font-sans -m-8 md:-m-10">
-      <header className="h-16 bg-white border-b border-gray-200 flex items-center gap-4 px-8">
+    <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-950 font-sans -m-8 md:-m-10 transition-colors duration-300">
+      <header className="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center gap-4 px-8">
         <button
           type="button"
           onClick={() => navigate("/admin/employees")}
-          className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
         >
           <ArrowLeft size={20} />
         </button>
-        <h2 className="text-xl font-bold text-gray-800">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white">
           {isEdit ? "Chỉnh sửa Nhân viên" : "Thêm Nhân viên mới"}
         </h2>
       </header>
@@ -139,10 +139,10 @@ const EmployeeForm = () => {
       <main className="flex-1 overflow-y-auto p-8">
         <form
           onSubmit={handleSubmit}
-          className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 p-8 space-y-6"
+          className="max-w-3xl mx-auto bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-8 space-y-6"
         >
           {errorMessage && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300">
               {errorMessage}
             </div>
           )}
@@ -150,18 +150,18 @@ const EmployeeForm = () => {
           {!isEdit && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                   Username *
                 </label>
                 <input
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
+                  className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                   Mật khẩu *
                 </label>
                 <input
@@ -169,7 +169,7 @@ const EmployeeForm = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
+                  className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
                 />
               </div>
             </div>
@@ -177,7 +177,7 @@ const EmployeeForm = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                 Họ và tên *
               </label>
               <input
@@ -185,11 +185,11 @@ name="fullName"
                 value={formData.fullName}
                 onChange={handleChange}
                 required
-                className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
+                className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                 Email *
               </label>
               <input
@@ -198,40 +198,40 @@ name="fullName"
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
+                className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                 Số điện thoại
               </label>
               <input
                 name="phoneNumber"
                 value={formData.phoneNumber}
                 onChange={handleChange}
-                className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
+                className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                 CMND/CCCD
               </label>
               <input
                 name="identityCard"
                 value={formData.identityCard}
                 onChange={handleChange}
-                className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
+                className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                 Giới tính
               </label>
               <select
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
-                className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
+                className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
               >
                 <option value="Nam">Nam</option>
                 <option value="Nữ">Nữ</option>
@@ -239,7 +239,7 @@ name="fullName"
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                 Ngày sinh
               </label>
               <input
@@ -247,27 +247,27 @@ name="fullName"
                 name="dateOfBirth"
                 value={formData.dateOfBirth}
                 onChange={handleChange}
-className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
+className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
               Địa chỉ
             </label>
             <input
               name="address"
               value={formData.address}
               onChange={handleChange}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
+              className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
             />
           </div>
 
           {isEdit && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-gray-100 dark:border-gray-800">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                   Mật khẩu mới (tùy chọn)
                 </label>
                 <input
@@ -275,11 +275,11 @@ className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ou
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
+                  className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                   Xác nhận mật khẩu
                 </label>
                 <input
@@ -287,7 +287,7 @@ className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ou
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
+                  className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
                 />
               </div>
             </div>
@@ -295,7 +295,7 @@ className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ou
 
           {!isEdit && (
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
                 Xác nhận mật khẩu *
               </label>
               <input
@@ -303,7 +303,7 @@ className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ou
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
+                className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C00000]/20 focus:border-[#C00000]"
               />
             </div>
           )}
@@ -312,7 +312,7 @@ className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ou
             <button
               type="button"
               onClick={() => navigate("/admin/employees")}
-              className="px-6 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-lg"
+              className="px-6 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
             >
               Hủy
             </button>

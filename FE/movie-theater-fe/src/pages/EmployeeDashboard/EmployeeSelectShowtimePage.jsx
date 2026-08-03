@@ -28,7 +28,7 @@ const EmployeeSelectShowtimePage = () => {
   }, [location.state?.selectedMovieId]);
 
   const activeMovies = useMemo(
-    () => movies.filter((m) => m.status !== "INACTIVE"),
+    () => movies.filter((m) => m.status !== "UNSCHEDULED" && m.status !== "INACTIVE" && m.status !== "ENDED"),
     [movies]
   );
 
@@ -41,7 +41,7 @@ const EmployeeSelectShowtimePage = () => {
     setLoading(true);
     MovieService.getAllMovies()
       .then((res) => {
-        const list = (res.data.data || []).filter((m) => m.status !== "INACTIVE");
+        const list = (res.data.data || []).filter((m) => m.status !== "UNSCHEDULED" && m.status !== "INACTIVE" && m.status !== "ENDED");
         setMovies(list);
         return Promise.all(
           list.map((m) =>

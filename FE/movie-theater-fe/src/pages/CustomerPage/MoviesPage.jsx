@@ -1,20 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Search, Star } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import MovieService from '../../services/MovieService';
 import MoviePoster from '../../components/MoviePoster';
 
 const PAGE_SIZE = 10;
-const SUGGESTION_LIMIT = 8;
 const TABS = [
   { key: 'now-showing', label: 'Phim đang chiếu' },
   { key: 'coming-soon', label: 'Phim sắp chiếu' },
 ];
-
-const getLocalDate = () => {
-  const tzoffset = new Date().getTimezoneOffset() * 60000;
-  return new Date(Date.now() - tzoffset).toISOString().split('T')[0];
-};
 
 const getRating = (movieId) => {
   if (!movieId) return '9.0';
@@ -27,30 +21,25 @@ const getRating = (movieId) => {
 
 const getMovieName = (movie) => movie.movieNameVn || movie.movieNameEnglish || '';
 
+// Lọc theo status do BE tính (MovieStatusResolver), không tự suy ra từ fromDate/toDate:
+// đây là trang công khai nên phải luôn ẩn UNSCHEDULED/INACTIVE, kể cả khi API trả về
+// danh sách chưa lọc (trường hợp cookie của tài khoản Admin bị gửi kèm).
 const splitBySchedule = (movieList) => {
-  const today = getLocalDate();
-  const active = movieList.filter(
-    (m) => m.fromDate <= today && (!m.toDate || m.toDate >= today)
-  );
-  const upcoming = movieList.filter((m) => m.fromDate > today);
+  const active = movieList.filter((m) => m.status === 'SHOWING');
+  const upcoming = movieList.filter((m) => m.status === 'UPCOMING');
   return { active, upcoming };
 };
 
 const MoviesPage = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [allMovies, setAllMovies] = useState([]);
   const [nowShowing, setNowShowing] = useState([]);
   const [comingSoon, setComingSoon] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [keyword, setKeyword] = useState('');
-  const [appliedKeyword, setAppliedKeyword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const searchBoxRef = useRef(null);
 
   const activeTab = searchParams.get('tab') === 'coming-soon' ? 'coming-soon' : 'now-showing';
   const currentPage = Math.max(1, Number(searchParams.get('page')) || 1);
+  const appliedKeyword = (searchParams.get('q') || '').trim();
 
   const applyMovieLists = (movieList) => {
     const { active, upcoming } = splitBySchedule(movieList);
@@ -58,90 +47,35 @@ const MoviesPage = () => {
     setComingSoon(upcoming);
   };
 
-  const loadAllMovies = () => {
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     setErrorMessage('');
-    MovieService.getAllMovies()
+
+    const request = appliedKeyword
+      ? MovieService.searchMovies(appliedKeyword)
+      : MovieService.getAllMovies();
+
+    request
       .then((response) => {
-        const data = response.data.data || [];
-        setAllMovies(data);
-        applyMovieLists(data);
-      })
-      .catch((error) => {
-        console.error('Lỗi lấy danh sách phim:', error);
-        setErrorMessage('Không thể tải danh sách phim.');
-        setAllMovies([]);
-        setNowShowing([]);
-        setComingSoon([]);
-      })
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    loadAllMovies();
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchBoxRef.current && !searchBoxRef.current.contains(event.target)) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const suggestions = useMemo(() => {
-    const query = keyword.trim().toLowerCase();
-    if (!query) return [];
-
-    return allMovies
-      .filter((movie) => {
-        const vn = (movie.movieNameVn || '').toLowerCase();
-        const en = (movie.movieNameEnglish || '').toLowerCase();
-        return vn.includes(query) || en.includes(query);
-      })
-      .sort((a, b) => getMovieName(a).localeCompare(getMovieName(b), 'vi', { sensitivity: 'base' }))
-      .slice(0, SUGGESTION_LIMIT);
-  }, [keyword, allMovies]);
-
-  const handleKeywordChange = (event) => {
-    setKeyword(event.target.value);
-    setShowSuggestions(true);
-  };
-
-  const handleSelectSuggestion = (movie) => {
-    const name = getMovieName(movie);
-    setKeyword(name);
-    setShowSuggestions(false);
-    navigate(`/detail/${movie.movieId}`);
-  };
-
-  const handleSearch = () => {
-    const trimmed = keyword.trim();
-    setAppliedKeyword(trimmed);
-    setShowSuggestions(false);
-    setSearchParams({ tab: activeTab, page: '1' });
-
-    if (!trimmed) {
-      loadAllMovies();
-      return;
-    }
-
-    setLoading(true);
-    setErrorMessage('');
-    MovieService.searchMovies(trimmed)
-      .then((response) => {
+        if (cancelled) return;
         applyMovieLists(response.data.data || []);
       })
       .catch((error) => {
-        console.error('Lỗi tìm kiếm phim:', error);
-        setErrorMessage('Không thể tìm kiếm phim.');
+        if (cancelled) return;
+        console.error(appliedKeyword ? 'Lỗi tìm kiếm phim:' : 'Lỗi lấy danh sách phim:', error);
+        setErrorMessage(appliedKeyword ? 'Không thể tìm kiếm phim.' : 'Không thể tải danh sách phim.');
         setNowShowing([]);
         setComingSoon([]);
       })
-      .finally(() => setLoading(false));
-  };
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [appliedKeyword]);
 
   const movies = activeTab === 'coming-soon' ? comingSoon : nowShowing;
   const totalPages = Math.max(1, Math.ceil(movies.length / PAGE_SIZE));
@@ -152,12 +86,23 @@ const MoviesPage = () => {
     return movies.slice(start, start + PAGE_SIZE);
   }, [movies, safePage]);
 
+  const buildParams = (overrides = {}) => {
+    const next = {
+      tab: activeTab,
+      page: String(currentPage),
+      ...overrides,
+    };
+    if (appliedKeyword) next.q = appliedKeyword;
+    else delete next.q;
+    return next;
+  };
+
   const switchTab = (tabKey) => {
-    setSearchParams({ tab: tabKey, page: '1' });
+    setSearchParams(buildParams({ tab: tabKey, page: '1' }));
   };
 
   const switchPage = (page) => {
-    setSearchParams({ tab: activeTab, page: String(page) });
+    setSearchParams(buildParams({ page: String(page) }));
   };
 
   if (loading) {
@@ -178,57 +123,6 @@ const MoviesPage = () => {
           <h1 className="font-display text-2xl md:text-3xl font-black tracking-tight text-gray-950 dark:text-white uppercase">
             Danh sách phim
           </h1>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3 mb-8">
-          <div className="relative flex-1 min-w-0" ref={searchBoxRef}>
-            <input
-              type="text"
-              value={keyword}
-              onChange={handleKeywordChange}
-              onFocus={() => setShowSuggestions(true)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSearch();
-                if (e.key === 'Escape') setShowSuggestions(false);
-              }}
-              maxLength={100}
-              placeholder="Nhập tên phim..."
-              className="w-full bg-gray-100 dark:bg-white/5 text-sm text-gray-800 dark:text-white/90 rounded-full px-5 py-2.5 border border-transparent dark:border-white/10 focus:outline-none focus:bg-white dark:focus:bg-[#10131A]/90 focus:ring-1 focus:ring-gray-300 dark:focus:ring-[#4CC9F0]/40 dark:focus:border-[#4CC9F0]/50 placeholder-gray-400 dark:placeholder-white/35 transition-all"
-              aria-label="Tìm kiếm phim"
-              aria-autocomplete="list"
-              aria-expanded={showSuggestions && keyword.trim().length > 0}
-            />
-            {showSuggestions && keyword.trim() && (
-              <ul className="absolute left-0 right-0 top-full mt-2 z-30 bg-white dark:bg-[#10131A]/95 dark:backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-xl shadow-lg max-h-72 overflow-y-auto">
-                {suggestions.length > 0 ? (
-                  suggestions.map((movie) => (
-                    <li key={movie.movieId}>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectSuggestion(movie)}
-                        className="w-full text-left px-4 py-2.5 text-sm text-gray-800 dark:text-white/90 hover:bg-gray-50 dark:hover:bg-white/8 transition-colors"
-                      >
-                        <span className="font-semibold">{getMovieName(movie)}</span>
-                        {movie.movieNameVn && movie.movieNameEnglish && movie.movieNameVn !== movie.movieNameEnglish && (
-                          <span className="block text-xs text-gray-400 dark:text-white/40 mt-0.5">{movie.movieNameEnglish}</span>
-                        )}
-                      </button>
-                    </li>
-                  ))
-                ) : (
-                  <li className="px-4 py-3 text-sm text-gray-500 dark:text-white/50">No movies found</li>
-                )}
-              </ul>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={handleSearch}
-            className="inline-flex items-center justify-center gap-2 bg-[#E50914] hover:bg-[#c40812] dark:hover:bg-[#ff1a25] text-white text-sm font-bold px-6 py-2.5 rounded-full transition-colors shrink-0 shadow-lg shadow-red-600/20"
-          >
-            <Search size={16} />
-            Tìm kiếm
-          </button>
         </div>
 
         {errorMessage && (

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Edit, Search, Plus, Trash2, RotateCcw, Popcorn } from "lucide-react";
+import { Edit, Search, Plus, Trash2, RotateCcw, Popcorn, AlertTriangle } from "lucide-react";
 import Pagination from "../../../components/Pagination";
 import AddConcessionModal from "./add/AddConcessionModal";
 import EditConcessionModal from "./edit/EditConcessionModal";
@@ -8,6 +8,7 @@ import {
   PAGE_SIZE,
   ITEM_TYPE_META,
   CONCESSION_SERVICE_BY_TYPE,
+  SIZE_OPTIONS,
   getApiErrorMessage,
   mapConcessionApiError,
   getConcessionStatusBadge,
@@ -15,11 +16,35 @@ import {
 } from "./shared/concessionFormConstants";
 import { CONCESSION_LABELS } from "../../../constants/labels";
 
+const SIZE_LABEL_BY_VALUE = SIZE_OPTIONS.reduce((acc, opt) => {
+  acc[opt.value] = opt.label;
+  return acc;
+}, {});
+
 const TABS = [
   { key: "food", label: CONCESSION_LABELS.tabFood },
   { key: "drink", label: CONCESSION_LABELS.tabDrink },
   { key: "combo", label: CONCESSION_LABELS.tabCombo },
 ];
+
+const ComboComposition = ({ items }) => {
+  if (!items || items.length === 0) {
+    return (
+      <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-amber-600">
+        <AlertTriangle size={12} />
+        {CONCESSION_LABELS.comboEmptyWarning}
+      </p>
+    );
+  }
+  const summary = items
+    .map((i) => `${i.foodName || i.drinkName} (${SIZE_LABEL_BY_VALUE[i.size] || i.size}) x${i.quantity}`)
+    .join(", ");
+  return (
+    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 truncate" title={summary}>
+      {CONCESSION_LABELS.comboCompositionLabel}: {summary}
+    </p>
+  );
+};
 
 const ConcessionManagement = () => {
   const [activeTab, setActiveTab] = useState("food");
@@ -120,13 +145,13 @@ const ConcessionManagement = () => {
     }
   };
 
-  const thClass = "px-4 py-3 text-xs text-gray-500 font-bold overflow-hidden";
-  const tdClass = "px-4 py-3 text-sm text-gray-600 overflow-hidden";
+  const thClass = "px-4 py-3 text-xs text-gray-500 dark:text-gray-400 font-bold overflow-hidden";
+  const tdClass = "px-4 py-3 text-sm text-gray-600 dark:text-gray-300 overflow-hidden";
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gray-50 font-sans -m-8 md:-m-10">
-      <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 shrink-0 gap-4">
-        <h2 className="text-xl font-bold text-gray-800 shrink-0">{CONCESSION_LABELS.pageTitle}</h2>
+    <div className="flex-1 flex flex-col h-full bg-gray-50 dark:bg-gray-950 font-sans -m-8 md:-m-10 transition-colors duration-300">
+      <header className="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-8 shrink-0 gap-4">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white shrink-0">{CONCESSION_LABELS.pageTitle}</h2>
         <div className="flex items-center gap-3 flex-wrap">
           <div className="relative">
             <input
@@ -135,9 +160,9 @@ const ConcessionManagement = () => {
               onChange={handleSearchChange}
               maxLength={100}
               placeholder={CONCESSION_LABELS.searchPlaceholder}
-              className="bg-gray-100 text-sm rounded-full pl-10 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-gray-300 w-48"
+              className="bg-gray-100 dark:bg-gray-800/60 dark:text-white text-sm rounded-full pl-10 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600 w-48"
             />
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           </div>
           <button
             type="button"
@@ -151,14 +176,14 @@ const ConcessionManagement = () => {
       </header>
 
       <main className="flex-1 overflow-y-auto p-8">
-        <div className="mb-4 flex items-center gap-2 bg-white rounded-xl shadow-sm border border-gray-200 p-1.5 w-fit">
+        <div className="mb-4 flex items-center gap-2 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-1.5 w-fit">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
               className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${
-                activeTab === tab.key ? "bg-[#C00000] text-white" : "text-gray-500 hover:bg-gray-100"
+                activeTab === tab.key ? "bg-[#C00000] text-white" : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
               {tab.label}
@@ -167,23 +192,12 @@ const ConcessionManagement = () => {
         </div>
 
         {errorMessage && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-4 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300">
             {errorMessage}
           </div>
         )}
 
-        <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {!isLoading && items.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={items.length}
-              pageSize={PAGE_SIZE}
-              onPageChange={setCurrentPage}
-              itemLabel={CONCESSION_LABELS.itemLabel}
-            />
-          )}
-
+        <div className="w-full bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] table-fixed text-left border-collapse">
               <colgroup>
@@ -194,7 +208,7 @@ const ConcessionManagement = () => {
                 <col className="w-32" />
               </colgroup>
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
+                <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">
                   <th className={thClass}>{CONCESSION_LABELS.columnImage}</th>
                   <th className={thClass}>{CONCESSION_LABELS.columnName}</th>
                   <th className={thClass}>{CONCESSION_LABELS.columnPrice}</th>
@@ -202,10 +216,10 @@ const ConcessionManagement = () => {
                   <th className={`${thClass} text-center`}>{CONCESSION_LABELS.columnActions}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {isLoading ? (
                   <tr>
-                    <td colSpan="5" className="px-4 py-16 text-center text-gray-500">
+                    <td colSpan="5" className="px-4 py-16 text-center text-gray-500 dark:text-gray-400">
                       {CONCESSION_LABELS.loadingList}
                     </td>
                   </tr>
@@ -222,22 +236,25 @@ const ConcessionManagement = () => {
                     const statusBadge = getConcessionStatusBadge(item.status);
                     const isDeleted = item.status === "DELETED";
                     return (
-                      <tr key={id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors">
                         <td className={tdClass}>
-                          <div className="w-14 h-14 rounded overflow-hidden bg-gray-100 shrink-0">
+                          <div className="w-14 h-14 rounded overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0">
                             {item.image ? (
                               <img src={item.image} alt={name} className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-300">
+                              <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-600">
                                 <Popcorn size={18} />
                               </div>
                             )}
                           </div>
                         </td>
                         <td className={tdClass}>
-                          <p className="font-semibold text-gray-900 truncate" title={name}>
+                          <p className="font-semibold text-gray-900 dark:text-white truncate" title={name}>
                             {name}
                           </p>
+                          {activeTab === "combo" && (
+                            <ComboComposition items={item.items} />
+                          )}
                         </td>
                         <td className={tdClass}>{formatPriceSummary(item.prices)}</td>
                         <td className={tdClass}>
@@ -254,7 +271,7 @@ const ConcessionManagement = () => {
                                 <button
                                   type="button"
                                   onClick={() => setEditingItem(item)}
-                                  className="text-blue-500 hover:text-blue-700 p-1.5 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+                                  className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 p-1.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-md transition-colors"
                                   title={CONCESSION_LABELS.actionEdit}
                                 >
                                   <Edit size={15} />
@@ -264,7 +281,7 @@ const ConcessionManagement = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleRestore(item)}
-                                  className="text-green-500 hover:text-green-700 p-1.5 bg-green-50 hover:bg-green-100 rounded-md transition-colors"
+                                  className="text-green-500 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 p-1.5 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-md transition-colors"
                                   title={CONCESSION_LABELS.actionRestore}
                                 >
                                   <RotateCcw size={15} />
@@ -273,7 +290,7 @@ const ConcessionManagement = () => {
                                 <button
                                   type="button"
                                   onClick={() => setDeletingItem(item)}
-                                  className="text-red-500 hover:text-red-700 p-1.5 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
+                                  className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1.5 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-md transition-colors"
                                   title={CONCESSION_LABELS.actionDelete}
                                 >
                                   <Trash2 size={15} />
@@ -281,7 +298,7 @@ const ConcessionManagement = () => {
                               )}
                             </div>
                             {actionError.id === id && (
-                              <p className="text-xs text-red-500 text-center max-w-[120px] leading-tight">
+                              <p className="text-xs text-red-500 dark:text-red-400 text-center max-w-[120px] leading-tight">
                                 {actionError.msg}
                               </p>
                             )}

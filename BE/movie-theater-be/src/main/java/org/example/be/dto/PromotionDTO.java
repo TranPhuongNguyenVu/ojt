@@ -36,6 +36,7 @@ public class PromotionDTO {
     private LocalTime applicableStartTime;
     private LocalTime applicableEndTime;
     private Boolean birthdayOnly;
+    private Boolean allowMultipleUsePerCustomer;
     private Boolean expiringSoon;
     private Long daysRemaining;
 }

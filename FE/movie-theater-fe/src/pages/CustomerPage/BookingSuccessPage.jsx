@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { CheckCircle2, Calendar, Clock, Film, MapPin, User, Mail, CreditCard, Phone, Printer, ShoppingBag, Ticket } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { CheckCircle2, Calendar, Clock, Film, MapPin, User, Mail, Phone, Printer, ShoppingBag, Ticket, MailCheck } from 'lucide-react';
 import BookingService from '../../services/BookingService';
 import BookingStepper from '../../components/BookingStepper';
 
@@ -12,6 +13,7 @@ const BookingSuccessPage = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState({});
   const [concessions, setConcessions] = useState([]);
+  const [showEmailBanner, setShowEmailBanner] = useState(true);
 
   useEffect(() => {
     // Lấy thông tin user
@@ -51,6 +53,20 @@ const BookingSuccessPage = () => {
       });
   }, [invoiceId, location.state]);
 
+  useEffect(() => {
+    if (booking?.movieTitle) {
+      document.title = `Vé xem Phim - ${booking.movieTitle}`;
+    }
+  }, [booking]);
+
+  useEffect(() => {
+    if (!booking?.emailSent) {
+      return undefined;
+    }
+    const timer = setTimeout(() => setShowEmailBanner(false), 10000);
+    return () => clearTimeout(timer);
+  }, [booking]);
+
   if (loading) {
     return (
       <div className="cine-booking-canvas min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#050505] transition-colors duration-300">
@@ -78,7 +94,19 @@ const BookingSuccessPage = () => {
   const seatList = booking.seats ? booking.seats.split(', ') : [];
   const seatsCount = seatList.length;
 
-  const effectiveConcessions = (concessions && concessions.length > 0) ? concessions : (booking.concessions || []);
+  const rawConcessions = (concessions && concessions.length > 0) ? concessions : (booking.concessions || []);
+  // Dữ liệu từ sessionStorage dùng field { name, price }, còn dữ liệu từ API lịch sử
+  // (ConcessionLineDTO) dùng field { itemName, unitPrice, lineTotal } - chuẩn hóa về chung 1 shape.
+  const effectiveConcessions = rawConcessions.map((item) => {
+    const quantity = item.quantity ?? 0;
+    const price = item.price ?? item.unitPrice ?? (quantity > 0 ? item.lineTotal / quantity : 0) ?? 0;
+    return {
+      ...item,
+      name: item.name ?? item.itemName ?? '',
+      price,
+      quantity,
+    };
+  });
   const hasConcessions = effectiveConcessions.length > 0;
 
   const concessionTotalSum = effectiveConcessions.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -97,7 +125,7 @@ const BookingSuccessPage = () => {
       </div>
 
       <div className={`${hasConcessions ? 'max-w-6xl' : 'max-w-3xl'} mx-auto px-6 pt-12 space-y-8`}>
-        
+
         {/* ================= THÔNG BÁO THÀNH CÔNG ================= */}
         <div className="text-center space-y-3 print:hidden">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-950/50 text-green-600 dark:text-green-400 mb-2">
@@ -118,7 +146,7 @@ const BookingSuccessPage = () => {
 
           {/* ================= PHIẾU 1: HÓA ĐƠN VÉ XEM PHIM ================= */}
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-lg overflow-hidden relative print:border-none print:shadow-none transition-colors duration-300">
-            
+
             <div className="bg-[#E50914] px-6 py-4 flex items-center justify-between text-white">
               <div className="flex items-center gap-2">
                 <Ticket size={20} />
@@ -184,9 +212,9 @@ const BookingSuccessPage = () => {
               <div className="w-4 h-8 bg-[#F8F9FA] dark:bg-[#050505] rounded-l-full border-l border-t border-b border-gray-200/80 dark:border-gray-800 -mr-1"></div>
             </div>
 
-            {/* Phần dưới: Thông tin người mua và Barcode nhận vé xem phim */}
+            {/* Phần dưới: Thông tin người mua và QR soát vé */}
             <div className="p-6 md:p-8 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-              
+
               <div className="md:col-span-2 space-y-4 text-xs font-bold text-gray-500 dark:text-gray-400">
                 <div className="space-y-1">
                   <span className="text-[9px] font-black text-gray-400 tracking-wider uppercase flex items-center gap-1"><User size={10} /> HỌ TÊN KHÁCH HÀNG</span>
@@ -204,36 +232,20 @@ const BookingSuccessPage = () => {
                 </div>
               </div>
 
-              {/* Mã vạch QR Code soát vé */}
+              {/* QR soát vé */}
               <div className="flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-gray-200/80 dark:border-gray-700 pt-6 md:pt-0 md:pl-6 space-y-2">
-                <div className="w-24 h-24 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 p-2 rounded-xl shadow-sm flex items-center justify-center">
-                  <svg viewBox="0 0 100 100" className="w-full h-full text-gray-900 dark:text-gray-100">
-                    <rect x="10" y="10" width="20" height="20" fill="currentColor"/>
-                    <rect x="15" y="15" width="10" height="10" fill="white"/>
-                    <rect x="70" y="10" width="20" height="20" fill="currentColor"/>
-                    <rect x="75" y="15" width="10" height="10" fill="white"/>
-                    <rect x="10" y="70" width="20" height="20" fill="currentColor"/>
-                    <rect x="15" y="75" width="10" height="10" fill="white"/>
-                    <rect x="35" y="10" width="5" height="10" fill="currentColor"/>
-                    <rect x="45" y="15" width="10" height="5" fill="currentColor"/>
-                    <rect x="40" y="25" width="20" height="5" fill="currentColor"/>
-                    <rect x="10" y="35" width="10" height="5" fill="currentColor"/>
-                    <rect x="25" y="35" width="5" height="10" fill="currentColor"/>
-                    <rect x="35" y="45" width="15" height="10" fill="currentColor"/>
-                    <rect x="55" y="35" width="10" height="15" fill="currentColor"/>
-                    <rect x="70" y="35" width="5" height="20" fill="currentColor"/>
-                    <rect x="80" y="45" width="10" height="5" fill="currentColor"/>
-                    <rect x="10" y="50" width="15" height="5" fill="currentColor"/>
-                    <rect x="15" y="60" width="5" height="5" fill="currentColor"/>
-                    <rect x="35" y="60" width="15" height="5" fill="currentColor"/>
-                    <rect x="35" y="70" width="5" height="15" fill="currentColor"/>
-                    <rect x="45" y="75" width="10" height="10" fill="currentColor"/>
-                    <rect x="60" y="65" width="25" height="5" fill="currentColor"/>
-                    <rect x="60" y="75" width="5" height="15" fill="currentColor"/>
-                    <rect x="70" y="80" width="20" height="5" fill="currentColor"/>
-                    <rect x="80" y="70" width="5" height="5" fill="currentColor"/>
-                  </svg>
-                </div>
+                {booking.ticketCode ? (
+                  <div className="w-28 h-28 bg-white border border-gray-200 dark:border-gray-700 p-2 rounded-xl shadow-sm flex items-center justify-center">
+                    <QRCodeSVG value={booking.ticketCode} size={96} level="M" bgColor="#ffffff" fgColor="#111827" />
+                  </div>
+                ) : (
+                  <div className="w-28 h-28 bg-gray-50 dark:bg-gray-950 border border-dashed border-gray-300 dark:border-gray-700 rounded-xl flex items-center justify-center text-center px-3">
+                    <span className="text-[9px] font-bold text-gray-400">Mã vé đang được xử lý, vui lòng kiểm tra lại sau ít phút.</span>
+                  </div>
+                )}
+                {booking.ticketCode && (
+                  <span className="text-sm font-black text-gray-900 dark:text-white tracking-widest">{booking.ticketCode}</span>
+                )}
                 <span className="text-[9px] font-black text-gray-400 tracking-widest uppercase">MÃ SOÁT VÉ XEM PHIM</span>
               </div>
 
@@ -244,7 +256,7 @@ const BookingSuccessPage = () => {
           {/* ================= PHIẾU 2: PHIẾU BẮP NƯỚC & COMBO (CHỈ HIỆN KHI CÓ MUA BẮP NƯỚC) ================= */}
           {hasConcessions && (
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-lg overflow-hidden relative print:border-none print:shadow-none transition-colors duration-300">
-              
+
               <div className="bg-amber-600 px-6 py-4 flex items-center justify-between text-white">
                 <div className="flex items-center gap-2">
                   <ShoppingBag size={20} />
@@ -330,6 +342,15 @@ const BookingSuccessPage = () => {
 
         </div>
 
+        {showEmailBanner && booking.emailSent && booking.maskedEmail && (
+          <div className="print:hidden flex items-center justify-center gap-2.5 text-center bg-green-50 dark:bg-green-950/30 border border-green-100 dark:border-green-900/50 rounded-2xl px-5 py-3.5 max-w-xl mx-auto transition-opacity duration-500">
+            <MailCheck size={18} className="text-green-600 dark:text-green-400 shrink-0" />
+            <p className="text-xs font-semibold text-green-800 dark:text-green-300">
+              Đã gửi vé qua email tới <strong>{booking.maskedEmail}</strong>. Không thấy email? Vui lòng kiểm tra hộp thư Spam.
+            </p>
+          </div>
+        )}
+
         {/* ================= KHỐI NÚT HÀNH ĐỘNG ================= */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 print:hidden">
           <button
@@ -339,7 +360,7 @@ const BookingSuccessPage = () => {
             <Printer size={16} />
             <span>{hasConcessions ? 'IN 2 PHIẾU HÓA ĐƠN' : 'IN HÓA ĐƠN VÉ'}</span>
           </button>
-          
+
           <button
             onClick={() => navigate('/')}
             className="flex items-center justify-center gap-2 px-8 py-3.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-extrabold text-xs md:text-sm tracking-wider uppercase rounded-xl hover:bg-gray-800 dark:hover:bg-white transition-all transform active:scale-95 cursor-pointer w-full sm:w-auto"

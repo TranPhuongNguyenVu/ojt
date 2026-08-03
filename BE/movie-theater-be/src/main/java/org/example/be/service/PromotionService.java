@@ -2,23 +2,35 @@ package org.example.be.service;
 
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.be.dto.PromotionApplyRequest;
 import org.example.be.dto.PromotionApplyResultDTO;
 import org.example.be.dto.PromotionDTO;
 import org.example.be.dto.PromotionRequestDTO;
 import org.example.be.entity.Account;
+import org.example.be.entity.Invoice;
 import org.example.be.entity.Promotion;
+import org.example.be.entity.PromotionUsage;
+import org.example.be.entity.Schedule;
 import org.example.be.enums.PromotionDiscountType;
 import org.example.be.enums.PromotionStatus;
+import org.example.be.event.InvoicePaidEvent;
 import org.example.be.mapper.PromotionMapper;
 import org.example.be.repository.AccountRepository;
+import org.example.be.repository.InvoiceRepository;
 import org.example.be.repository.PromotionRepository;
+import org.example.be.repository.PromotionUsageRepository;
+import org.example.be.repository.ScheduleRepository;
 //import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 //import org.springframework.web.multipart.MultipartFile;
 //import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 //import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Comparator;
@@ -31,26 +43,34 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PromotionService {
     private final PromotionRepository promotionRepository;
     private final AccountRepository accountRepository;
     private final PromotionMapper promotionMapper;
     private final EntityManager entityManager;
+    private final PromotionUsageRepository promotionUsageRepository;
+    private final InvoiceRepository invoiceRepository;
+    private final ScheduleRepository scheduleRepository;
     //private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/gif");
     //private static final long MAX_IMAGE_SIZE = 5L * 1024 * 1024;
 
     /*@Value("${app.upload-dir:uploads}")
     private String uploadDir;*/
 
-    public List<PromotionDTO> getAdminPromotions(String keyword) {
-        List<Promotion> promotions = keyword == null || keyword.isBlank()
-                ? promotionRepository.findByIsDeletedOrderByStartTimeDesc(0)
-                : promotionRepository.searchForAdmin(keyword.trim());
+    public List<PromotionDTO> getAdminPromotions(String keyword, boolean isAdmin) {
+        List<Promotion> promotions;
+        if (isAdmin) {
+            promotions = keyword == null || keyword.isBlank()
+                    ? promotionRepository.findAllByOrderByStartTimeDesc()
+                    : promotionRepository.searchAllStatusesForAdmin(keyword.trim());
+        } else {
+            promotions = keyword == null || keyword.isBlank()
+                    ? promotionRepository.findByStatusNotOrderByStartTimeDesc(PromotionStatus.DELETED)
+                    : promotionRepository.searchForAdmin(keyword.trim());
+        }
 
-        return promotions
-                .stream()
-                .map(promotionMapper::toDTO)
-                .toList();
+        return promotions.stream().map(promotionMapper::toDTO).toList();
     }
 
     public PromotionDTO getAdminPromotion(Integer promotionId) {
@@ -80,29 +100,86 @@ public class PromotionService {
     public PromotionDTO createPromotion(PromotionRequestDTO requestDTO) {
         validatePromotionTime(requestDTO);
         Promotion promotion = promotionMapper.toEntity(requestDTO);
-        promotion.setIsDeleted(0);
         promotion.setStatus(PromotionStatus.ACTIVE);
         return promotionMapper.toDTO(promotionRepository.save(promotion));
     }
 
     @Transactional
     public PromotionDTO updatePromotion(Integer promotionId, PromotionRequestDTO requestDTO) {
-        validatePromotionTime(requestDTO);
-        if (requestDTO.getStatus() == PromotionStatus.DELETED) {
-            throw new IllegalArgumentException("Vui lòng sử dụng chức năng xóa ưu đãi.");
+        try {
+            validatePromotionTime(requestDTO);
+            if (requestDTO.getStatus() == PromotionStatus.DELETED) {
+                throw new IllegalArgumentException("Vui lòng sử dụng chức năng xóa ưu đãi.");
+            }
+            Promotion promotion = findExistingPromotion(promotionId);
+
+            BigDecimal newDiscountValue = requestDTO.getDiscountLevel() != null
+                    ? requestDTO.getDiscountLevel()
+                    : requestDTO.getPromotionValue();
+            PromotionDiscountType newDiscountType = requestDTO.getDiscountType() == null
+                    ? PromotionDiscountType.FIXED
+                    : requestDTO.getDiscountType();
+            boolean discountChanged = newDiscountType != promotion.getDiscountType()
+                    || newDiscountValue.compareTo(promotion.getPromotionValue()) != 0;
+
+            if (discountChanged && hasPendingInvoiceUsage(promotionId)) {
+                throw new IllegalArgumentException(
+                        "Không thể thay đổi mức giảm của ưu đãi đang được dùng trong giao dịch chờ thanh toán.");
+            }
+
+            promotionMapper.updateEntity(promotion, requestDTO);
+            return promotionMapper.toDTO(promotionRepository.save(promotion));
+        } catch (IllegalArgumentException ex) {
+            log.warn("Update promotion failed [promotionId={}, discountType={}, promotionValue={}, discountLevel={}, status={}]: {}",
+                    promotionId, requestDTO.getDiscountType(), requestDTO.getPromotionValue(),
+                    requestDTO.getDiscountLevel(), requestDTO.getStatus(), ex.getMessage());
+            throw ex;
+        } catch (RuntimeException ex) {
+            log.error("Unexpected error updating promotion [promotionId={}]", promotionId, ex);
+            throw ex;
         }
-        Promotion promotion = findExistingPromotion(promotionId);
-        promotionMapper.updateEntity(promotion, requestDTO);
-        return promotionMapper.toDTO(promotionRepository.save(promotion));
     }
 
     @Transactional
     public void deletePromotion(Integer promotionId) {
         Promotion promotion = findExistingPromotion(promotionId);
         validatePromotionCanBeDeleted(promotion);
-        promotion.setIsDeleted(1);
         promotion.setStatus(PromotionStatus.DELETED);
         promotionRepository.save(promotion);
+    }
+
+    @Transactional
+    public PromotionDTO activatePromotion(Integer promotionId) {
+        Promotion promotion = findExistingPromotion(promotionId);
+        if (promotion.getStatus() == PromotionStatus.ACTIVE) {
+            throw new IllegalArgumentException("Ưu đãi đã đang hoạt động.");
+        }
+        promotion.setStatus(PromotionStatus.ACTIVE);
+        return promotionMapper.toDTO(promotionRepository.save(promotion));
+    }
+
+    @Transactional
+    public PromotionDTO deactivatePromotion(Integer promotionId) {
+        Promotion promotion = findExistingPromotion(promotionId);
+        if (promotion.getStatus() == PromotionStatus.INACTIVE) {
+            throw new IllegalArgumentException("Ưu đãi đã tạm ngừng trước đó.");
+        }
+        promotion.setStatus(PromotionStatus.INACTIVE);
+        return promotionMapper.toDTO(promotionRepository.save(promotion));
+    }
+
+    @Transactional
+    public PromotionDTO reactivatePromotion(Integer promotionId, PromotionStatus targetStatus) {
+        Promotion promotion = promotionRepository.findById(promotionId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ưu đãi."));
+        if (promotion.getStatus() != PromotionStatus.DELETED) {
+            throw new IllegalArgumentException("Ưu đãi chưa bị xóa, không thể khôi phục.");
+        }
+        if (targetStatus != PromotionStatus.ACTIVE && targetStatus != PromotionStatus.INACTIVE) {
+            throw new IllegalArgumentException("Trạng thái khôi phục không hợp lệ.");
+        }
+        promotion.setStatus(targetStatus);
+        return promotionMapper.toDTO(promotionRepository.save(promotion));
     }
 
     /*public String uploadPromotionImage(MultipartFile image) {
@@ -129,8 +206,8 @@ public class PromotionService {
 
     public List<PromotionDTO> getActivePromotions() {
         LocalDateTime now = LocalDateTime.now();
-        return promotionRepository.findByIsDeletedAndStatusAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-                        0, PromotionStatus.ACTIVE, now, now)
+        return promotionRepository.findByStatusAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+                        PromotionStatus.ACTIVE, now, now)
                 .stream()
                 .map(promotionMapper::toDTO)
                 .sorted(Comparator
@@ -141,8 +218,8 @@ public class PromotionService {
     }
 
     public List<PromotionDTO> getExpiredPromotions() {
-        return promotionRepository.findByIsDeletedAndStatusAndEndTimeBefore(
-                        0, PromotionStatus.ACTIVE, LocalDateTime.now())
+        return promotionRepository.findByStatusAndEndTimeBefore(
+                        PromotionStatus.ACTIVE, LocalDateTime.now())
                 .stream()
                 .map(promotionMapper::toDTO)
                 .sorted(Comparator.comparing(PromotionDTO::getEndTime).reversed())
@@ -162,6 +239,7 @@ public class PromotionService {
         validateUsageLimit(promotion);
         validateShowTime(promotion, request.getShowTime());
         validateBirthdayPromotion(promotion, account);
+        validateSingleUsePerCustomer(promotion, account.getAccountId());
 
         return PromotionApplyResultDTO.builder()
                 .applicable(true)
@@ -170,9 +248,62 @@ public class PromotionService {
                 .build();
     }
 
+    /** Dùng cho bước khách nhập mã ưu đãi ở trang thanh toán (đã biết suất chiếu qua scheduleId). */
+    public void assertCustomerCanUsePromotion(Integer promotionId, String username, Integer scheduleId) {
+        Promotion promotion = findExistingPromotion(promotionId);
+
+        if (scheduleId != null) {
+            Schedule schedule = scheduleRepository.findById(scheduleId).orElse(null);
+            if (schedule != null) {
+                validateShowTime(promotion, schedule.getStartTime());
+            }
+        }
+
+        if (username == null) {
+            return;
+        }
+        Account account = accountRepository.findByUsername(username).orElse(null);
+        if (account == null) {
+            return;
+        }
+        validateBirthdayPromotion(promotion, account);
+        validateSingleUsePerCustomer(promotion, account.getAccountId());
+    }
+
+    /**
+     * Ghi nhận một lượt sử dụng ưu đãi khi hóa đơn được thanh toán thành công (idempotent theo invoiceId).
+     * Chạy trong transaction riêng vì được gọi từ listener AFTER_COMMIT, lúc đó transaction gốc đã kết thúc.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onInvoicePaid(InvoicePaidEvent event) {
+        Integer invoiceId = event.invoiceId();
+        Invoice invoice = invoiceRepository.findById(invoiceId).orElse(null);
+        if (invoice == null || invoice.getPromotionId() == null) {
+            return;
+        }
+        if (promotionUsageRepository.existsByInvoiceId(invoiceId)) {
+            return;
+        }
+        Promotion promotion = promotionRepository.findById(invoice.getPromotionId()).orElse(null);
+        if (promotion == null) {
+            return;
+        }
+
+        promotion.setUsedCount((promotion.getUsedCount() == null ? 0 : promotion.getUsedCount()) + 1);
+        promotionRepository.save(promotion);
+
+        promotionUsageRepository.save(PromotionUsage.builder()
+                .customerId(invoice.getAccountId())
+                .promotionId(promotion.getPromotionId())
+                .invoiceId(invoiceId)
+                .usedAt(LocalDateTime.now())
+                .build());
+    }
+
     private Promotion findExistingPromotion(Integer promotionId) {
         return promotionRepository.findById(promotionId)
-                .filter(promotion -> promotion.getIsDeleted() == 0)
+                .filter(promotion -> promotion.getStatus() != PromotionStatus.DELETED)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ưu đãi."));
     }
 
@@ -229,18 +360,22 @@ public class PromotionService {
     }*/
 
     private void validatePromotionCanBeDeleted(Promotion promotion) {
+        if (hasPendingInvoiceUsage(promotion.getPromotionId())) {
+            throw new IllegalArgumentException("Không thể xóa ưu đãi đang được dùng trong giao dịch chờ thanh toán.");
+        }
+    }
+
+    private boolean hasPendingInvoiceUsage(Integer promotionId) {
         Number pendingInvoiceCount = (Number) entityManager.createNativeQuery("""
                         select count(1)
                         from invoice
                         where promotion_id = ?1
                           and status = 0
                         """)
-                .setParameter(1, promotion.getPromotionId())
+                .setParameter(1, promotionId)
                 .getSingleResult();
 
-        if (pendingInvoiceCount.longValue() > 0) {
-            throw new IllegalArgumentException("Không thể xóa ưu đãi đang được dùng trong giao dịch chờ thanh toán.");
-        }
+        return pendingInvoiceCount.longValue() > 0;
     }
 
     private void validateShowTime(Promotion promotion, LocalDateTime showTime) {
@@ -267,6 +402,13 @@ public class PromotionService {
                 && promotion.getUsedCount() != null
                 && promotion.getUsedCount() >= promotion.getUsageLimit()) {
             throw new IllegalArgumentException("Ưu đãi đã hết lượt sử dụng.");
+        }
+    }
+
+    private void validateSingleUsePerCustomer(Promotion promotion, String customerId) {
+        if (Boolean.FALSE.equals(promotion.getAllowMultipleUsePerCustomer())
+                && promotionUsageRepository.existsByPromotionIdAndCustomerId(promotion.getPromotionId(), customerId)) {
+            throw new IllegalArgumentException("Bạn đã sử dụng ưu đãi này trước đó.");
         }
     }
 

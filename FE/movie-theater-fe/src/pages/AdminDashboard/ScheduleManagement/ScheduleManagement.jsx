@@ -11,6 +11,8 @@ import {
   ChevronRight,
   Filter,
   X,
+  AlertTriangle,
+  Search,
 } from "lucide-react";
 import MovieService from "../../../services/MovieService";
 import ScheduleService from "../../../services/ScheduleService";
@@ -21,6 +23,8 @@ import DateInput from "../../../components/DateInput";
 import AddScheduleModal from "./add/AddScheduleModal";
 import EditScheduleModal from "./edit/EditScheduleModal";
 import DeleteScheduleModal from "./delete/DeleteScheduleModal";
+import ScheduleDetailModal from "./detail/ScheduleDetailModal";
+import ScheduleStatusBadge from "./shared/ScheduleStatusBadge";
 import {
   isSameDay,
   todayStr,
@@ -32,17 +36,25 @@ import {
   ruleStartMinutes,
   ruleEndMinutes,
   compareSchedulesByStatusThenStartTime,
+  DISPLAY_STATUS_META,
 } from "./shared/scheduleFormConstants";
+import {
+  minutesFromReference,
+  extendAxisMinutes,
+  buildHourMarks,
+  computeBlockGeometry,
+  computeOverlapIds,
+} from "./shared/timelineGeometry";
 import { SCHEDULE_LABELS } from "../../../constants/labels";
 
 const PAGE_SIZE = 10;
 
-// Timeline constants — matches the actual creation window (08:00-23:00) so the
-// ruler never shows a permanently blank band where no schedule could ever exist.
+// Timeline constants — matches the actual creation window (08:00-23:00) as the
+// default band; the axis extends further right on days with late-running
+// shows (see axisTotalMinutes below) instead of hiding them past a hard cutoff.
 const TIMELINE_START_HOUR = EARLIEST_SCHEDULE_HOUR; // 08:00
-const TIMELINE_END_HOUR = 24;                       // 24:00 (movie duration can push past 23:00)
-const TOTAL_HOURS = TIMELINE_END_HOUR - TIMELINE_START_HOUR;
-const TOTAL_MINUTES = TOTAL_HOURS * 60;
+const TIMELINE_END_HOUR = 24;                       // default axis end (24:00)
+const BASE_TOTAL_MINUTES = (TIMELINE_END_HOUR - TIMELINE_START_HOUR) * 60;
 const PX_PER_MIN = 2; // 120px per hour on the horizontal axis
 const HEADER_HEIGHT = 40;
 const RAIL_WIDTH = 140; // sticky room rail on the left
@@ -54,20 +66,6 @@ const ROW_HEIGHT = 84; // one room per row
 // pages read as one visual system.
 const EVENT_BG = "#3467e0";
 const EVENT_FG = "#ffffff";
-
-// Minutes from the timeline's start hour for a given datetime string.
-const minutesFromStart = (datetimeStr) => {
-  if (!datetimeStr) return null;
-  const d = new Date(datetimeStr);
-  if (isNaN(d.getTime())) return null;
-  return d.getHours() * 60 + d.getMinutes() - TIMELINE_START_HOUR * 60;
-};
-
-// Hour marks (label + horizontal pixel offset) for the axis and gridlines.
-const hourMarks = Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => ({
-  label: `${String(TIMELINE_START_HOUR + i).padStart(2, "0")}:00`,
-  left: i * 60 * PX_PER_MIN,
-}));
 
 // Navigate date by delta days
 const offsetDate = (dateStr, delta) => {
@@ -91,21 +89,59 @@ const ScheduleManagement = () => {
   const [viewMode, setViewMode] = useState("timeline"); // "timeline" | "table"
 
   // Table filters + pagination
-  const [movieFilter, setMovieFilter] = useState("ALL");
   const [roomFilter, setRoomFilter] = useState("ALL");
+  const [movieSearchKeyword, setMovieSearchKeyword] = useState("");
+  // null = no active search (show all movies); Set = movieIds matched by the server-side search
+  const [movieSearchIds, setMovieSearchIds] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const movieSearchTimeoutRef = useRef(null);
 
-  const hasActiveFilters = movieFilter !== "ALL" || roomFilter !== "ALL";
+  const hasActiveFilters = roomFilter !== "ALL" || movieSearchKeyword.trim() !== "";
   const clearFilters = () => {
-    setMovieFilter("ALL");
     setRoomFilter("ALL");
+    setMovieSearchKeyword("");
+    setMovieSearchIds(null);
   };
+
+  // Same debounced server-side search pattern as MovieManagement's "Tìm kiếm phim":
+  // resolve the typed name to matching movieIds via MovieService.searchMovies, then
+  // filter the already-loaded day's schedules by that id set client-side.
+  const handleMovieSearchChange = (e) => {
+    const value = e.target.value;
+    setMovieSearchKeyword(value);
+    if (movieSearchTimeoutRef.current) clearTimeout(movieSearchTimeoutRef.current);
+    movieSearchTimeoutRef.current = setTimeout(() => {
+      const keyword = value.trim();
+      if (!keyword) {
+        setMovieSearchIds(null);
+        return;
+      }
+      MovieService.searchMovies(keyword)
+        .then((res) => {
+          const matched = res.data?.data || res.data || [];
+          setMovieSearchIds(new Set(matched.map((m) => m.movieId)));
+        })
+        .catch(() => setMovieSearchIds(new Set()));
+    }, 300);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (movieSearchTimeoutRef.current) clearTimeout(movieSearchTimeoutRef.current);
+    };
+  }, []);
 
   // Modals
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [addPrefill, setAddPrefill] = useState({});
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [deletingSchedule, setDeletingSchedule] = useState(null);
+  const [viewingSchedule, setViewingSchedule] = useState(null);
+
+  const openEditFromDetail = (schedule) => {
+    setViewingSchedule(null);
+    setEditingSchedule(schedule);
+  };
 
   // Tooltip
   const [tooltip, setTooltip] = useState(null); // { schedule, x, y }
@@ -122,25 +158,30 @@ const ScheduleManagement = () => {
       // Step 1: get rooms
       const roomsRes = await CinemaRoomService.getAll();
       const allRooms = roomsRes.data?.data || roomsRes.data || [];
-      const activeR = allRooms.filter((r) => r.status === "ACTIVE");
+      const activeR = allRooms
+        .filter((r) => r.status === "ACTIVE")
+        .sort((a, b) => a.cinemaRoomName.localeCompare(b.cinemaRoomName, "vi", { numeric: true }));
       setRooms(activeR);
       setActiveRooms(activeR);
 
-      // Step 2: get schedules per room + all movies (parallel)
-      const [scheduleResults, moviesRes] = await Promise.all([
+      // Step 2: get schedules per room + all movies + schedulable movies (parallel)
+      const [scheduleResults, moviesRes, schedulableMoviesRes] = await Promise.all([
         Promise.all(
           activeR.map((r) =>
             ScheduleService.getSchedulesByCinemaRoomId(r.cinemaRoomId).catch(() => ({ data: [] }))
           )
         ),
         MovieService.getAllMovies(),
+        MovieService.getSchedulableMovies(),
       ]);
 
-      // Build movie name map
+      // Build movie name map from the full list so schedules referencing a
+      // since-deleted movie still resolve a name (history must stay readable).
       const allMovies = moviesRes.data?.data || moviesRes.data || [];
       const nameMap = new Map(allMovies.map((m) => [m.movieId, m.movieNameVn]));
       setMovieNameMap(nameMap);
-      setActiveMovies(allMovies.filter((m) => m.status !== "INACTIVE"));
+      // The create/edit picker only offers movies BE already filtered as schedulable.
+      setActiveMovies(schedulableMoviesRes.data?.data || schedulableMoviesRes.data || []);
 
       // Merge all schedules
       const allSchedules = scheduleResults.flatMap((res) => {
@@ -198,16 +239,56 @@ const ScheduleManagement = () => {
     return map;
   }, [rooms, schedulesOfDay]);
 
-  // Filtered schedules for the table view (movie/room filter dropdowns)
+  // Axis zero = selectedDate at TIMELINE_START_HOUR:00. Every block's minute
+  // offset is a real millisecond diff from this instant (see timelineGeometry),
+  // so a show that runs past midnight resolves to a larger, correctly ordered
+  // end offset instead of wrapping to a smaller same-day hour/minute value.
+  const axisZero = useMemo(() => new Date(`${selectedDate}T${String(TIMELINE_START_HOUR).padStart(2, "0")}:00:00`), [selectedDate]);
+
+  const scheduleMinutes = useMemo(() => {
+    const map = new Map();
+    schedulesOfDay.forEach((s) => {
+      map.set(s.scheduleId, {
+        startMin: minutesFromReference(s.startTime, axisZero),
+        endMin: minutesFromReference(s.endTime, axisZero),
+      });
+    });
+    return map;
+  }, [schedulesOfDay, axisZero]);
+
+  // Axis stretches past the default 08:00-24:00 window when a show's real end
+  // time pushes beyond it, instead of clipping it out of view.
+  const axisTotalMinutes = useMemo(() => {
+    const ends = Array.from(scheduleMinutes.values()).map((m) => m.endMin);
+    return extendAxisMinutes(BASE_TOTAL_MINUTES, ends);
+  }, [scheduleMinutes]);
+
+  const hourMarks = useMemo(
+    () => buildHourMarks(TIMELINE_START_HOUR * 60, axisTotalMinutes, PX_PER_MIN),
+    [axisTotalMinutes]
+  );
+
+  // Ids of schedules that overlap another schedule in the same room — an admin
+  // data problem that must stay visible, not silently stack under hover:z-20.
+  const overlapIds = useMemo(() => {
+    const ids = new Set();
+    schedulesByRoom.forEach((roomSchedules) => {
+      const items = roomSchedules.map((s) => ({ id: s.scheduleId, ...scheduleMinutes.get(s.scheduleId) }));
+      computeOverlapIds(items).forEach((id) => ids.add(id));
+    });
+    return ids;
+  }, [schedulesByRoom, scheduleMinutes]);
+
+  // Filtered schedules for the table view (room dropdown + movie name search)
   const filteredSchedules = useMemo(() => {
     return schedulesOfDay
       .filter((s) => {
-        const matchMovie = movieFilter === "ALL" || s.movieId === movieFilter;
+        const matchMovie = movieSearchIds === null || movieSearchIds.has(s.movieId);
         const matchRoom = roomFilter === "ALL" || String(s.cinemaRoomId) === String(roomFilter);
         return matchMovie && matchRoom;
       })
       .sort(compareSchedulesByStatusThenStartTime);
-  }, [schedulesOfDay, movieFilter, roomFilter]);
+  }, [schedulesOfDay, movieSearchIds, roomFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSchedules.length / PAGE_SIZE));
   const paginatedSchedules = useMemo(() => {
@@ -217,7 +298,7 @@ const ScheduleManagement = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [movieFilter, roomFilter, selectedDate]);
+  }, [movieSearchIds, roomFilter, selectedDate]);
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
@@ -227,11 +308,13 @@ const ScheduleManagement = () => {
   const handleTimelineClick = (e, room) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const xRatio = (e.clientX - rect.left) / rect.width;
-    const clickedMinutes = Math.round((xRatio * TOTAL_MINUTES) / 30) * 30;
+    const clickedMinutes = Math.round((xRatio * axisTotalMinutes) / 30) * 30;
     const startHour = TIMELINE_START_HOUR + Math.floor(clickedMinutes / 60);
     const startMin = clickedMinutes % 60;
     const pad = (n) => String(n).padStart(2, "0");
-    const startTime = `${selectedDate}T${pad(startHour)}:${pad(startMin)}`;
+    const dayOffset = Math.floor(startHour / 24);
+    const dateForClick = dayOffset > 0 ? offsetDate(selectedDate, dayOffset) : selectedDate;
+    const startTime = `${dateForClick}T${pad(startHour % 24)}:${pad(startMin)}`;
     setAddPrefill({ cinemaRoomId: room.cinemaRoomId, startTime });
     setIsAddOpen(true);
   };
@@ -252,34 +335,45 @@ const ScheduleManagement = () => {
   // ═══════════════════════════════════════════════
   //  RENDER: Timeline block
   // ═══════════════════════════════════════════════
+  const NARROW_BLOCK_THRESHOLD_PX = 56;
+
   const renderBlock = (schedule) => {
-    const startMin = minutesFromStart(schedule.startTime);
-    const endMin = minutesFromStart(schedule.endTime);
-    if (startMin === null) return null;
-    const clampedStart = Math.max(0, startMin);
-    const clampedEnd = Math.min(endMin ?? clampedStart + 30, TOTAL_MINUTES);
-    const left = clampedStart * PX_PER_MIN + 2;
-    const width = Math.max(48, (clampedEnd - clampedStart) * PX_PER_MIN - 4);
+    const minutes = scheduleMinutes.get(schedule.scheduleId);
+    if (!minutes) return null;
+    const geometry = computeBlockGeometry(minutes.startMin, minutes.endMin, axisTotalMinutes, PX_PER_MIN);
+    if (!geometry) return null;
+    const { left, width, isInvalid } = geometry;
     const movieName = movieNameMap.get(schedule.movieId) || `Movie #${schedule.movieId}`;
     const format = schedule.movieFormat || "";
     const isGolden = Number(schedule.goldenHourExtra) > 0;
+    const hasOverlap = overlapIds.has(schedule.scheduleId);
+    const isNarrow = width < NARROW_BLOCK_THRESHOLD_PX;
+    const statusColor = DISPLAY_STATUS_META[schedule.displayStatus]?.dotVar || EVENT_BG;
+    const tooltipText = `${movieName} · ${formatTime(schedule.startTime)} – ${formatTime(schedule.endTime)}${format ? ` · ${format}` : ""}`;
 
     return (
       <div
         key={schedule.scheduleId}
-        className="absolute rounded-lg px-2 py-1.5 overflow-hidden shadow-sm hover:shadow-md hover:z-20 cursor-pointer transition-shadow group"
+        title={isNarrow ? tooltipText : undefined}
+        className={`absolute rounded-lg px-2 py-1.5 overflow-hidden shadow-sm hover:shadow-md hover:z-20 cursor-pointer transition-shadow group ${
+          isInvalid ? "border-2 border-red-500" : hasOverlap ? "border-2 border-amber-500" : ""
+        }`}
         style={{
           left,
           width,
           top: 12,
           height: ROW_HEIGHT - 24,
-          background: EVENT_BG,
+          background: isInvalid
+            ? "repeating-linear-gradient(45deg, #dc2626, #dc2626 6px, #b91c1c 6px, #b91c1c 12px)"
+            : hasOverlap
+              ? "repeating-linear-gradient(45deg, #3467e0, #3467e0 6px, #2c56ba 6px, #2c56ba 12px)"
+              : statusColor,
           color: EVENT_FG,
-          boxShadow: isGolden ? "0 0 0 2px rgba(192,0,0,.45)" : undefined,
+          boxShadow: isGolden ? "0 0 0 2px color-mix(in srgb, var(--cine-gold) 70%, transparent)" : undefined,
         }}
         onClick={(e) => {
           e.stopPropagation();
-          setEditingSchedule(schedule);
+          setViewingSchedule(schedule);
         }}
         onMouseEnter={(e) => {
           setTooltip({ schedule, movieName, x: e.clientX, y: e.clientY });
@@ -289,18 +383,26 @@ const ScheduleManagement = () => {
           setTooltip((prev) => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
         }}
       >
-        <div className="pointer-events-none">
-          <p className="font-bold text-[11px] leading-tight truncate">{movieName}</p>
-          <p className="text-[10px] opacity-80 mt-0.5 truncate">
-            {formatTime(schedule.startTime)} – {formatTime(schedule.endTime)}
-          </p>
-          {format && <p className="text-[10px] opacity-70 mt-0.5 truncate">{format}</p>}
-          {isGolden && (
-            <p className="text-[10px] opacity-90 mt-0.5 truncate font-semibold">
-              Giờ vàng +{Number(schedule.goldenHourExtra).toLocaleString("vi-VN")}đ
+        {(isInvalid || hasOverlap) && (
+          <AlertTriangle
+            size={12}
+            className={`absolute top-1 left-1 ${isInvalid ? "text-red-100" : "text-amber-200"}`}
+          />
+        )}
+        {!isNarrow && (
+          <div className="pointer-events-none">
+            <p className="font-bold text-[11px] leading-tight truncate">{movieName}</p>
+            <p className="text-[10px] opacity-80 mt-0.5 truncate">
+              {formatTime(schedule.startTime)} – {formatTime(schedule.endTime)}
             </p>
-          )}
-        </div>
+            {format && <p className="text-[10px] opacity-70 mt-0.5 truncate">{format}</p>}
+            {isGolden && (
+              <p className="text-[10px] opacity-90 mt-0.5 truncate font-semibold">
+                Giờ vàng +{Number(schedule.goldenHourExtra).toLocaleString("vi-VN")}đ
+              </p>
+            )}
+          </div>
+        )}
         <button
           type="button"
           title="Tạo suất tiếp theo (cùng phòng, ngay sau suất này)"
@@ -308,7 +410,7 @@ const ScheduleManagement = () => {
             e.stopPropagation();
             handleQuickAddNext(schedule);
           }}
-          className="absolute top-1 right-1 hidden group-hover:flex items-center justify-center w-4 h-4 rounded bg-white/90 text-gray-700 hover:bg-white shadow-sm z-30"
+          className="absolute top-1 right-1 hidden group-hover:flex items-center justify-center w-4 h-4 rounded bg-white/90 dark:bg-gray-900/90 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-900 shadow-sm z-30"
         >
           <Plus size={11} />
         </button>
@@ -319,39 +421,29 @@ const ScheduleManagement = () => {
   // ═══════════════════════════════════════════════
   //  RENDER: Table view
   // ═══════════════════════════════════════════════
-  const thClass = "px-4 py-3 text-xs text-gray-500 font-bold whitespace-nowrap";
-  const tdClass = "px-4 py-3 text-sm text-gray-600";
+  const thClass = "px-4 py-3 text-xs text-gray-500 dark:text-gray-400 font-bold whitespace-nowrap";
+  const tdClass = "px-4 py-3 text-sm text-gray-600 dark:text-gray-300";
 
   const renderTableView = () => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      {!isLoading && filteredSchedules.length > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={filteredSchedules.length}
-          pageSize={PAGE_SIZE}
-          onPageChange={setCurrentPage}
-          itemLabel="suất chiếu"
-        />
-      )}
-
+    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
+            <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">
               <th className={`${thClass} w-16`}>{SCHEDULE_LABELS.columnIndex}</th>
               <th className={thClass}>Phim</th>
               <th className={thClass}>Phòng</th>
               <th className={thClass}>Định dạng</th>
               <th className={thClass}>Bắt đầu</th>
               <th className={thClass}>Kết thúc</th>
+              <th className={thClass}>{SCHEDULE_LABELS.columnStatus}</th>
               <th className={`${thClass} text-center`}>Hành động</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {filteredSchedules.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-4 py-16 text-center text-[#C00000] font-black text-xl tracking-widest uppercase">
+                <td colSpan="8" className="px-4 py-16 text-center text-[#C00000] font-black text-xl tracking-widest uppercase">
                   {hasActiveFilters ? SCHEDULE_LABELS.noScheduleMatchesFilter : "Không có suất chiếu nào trong ngày này!"}
                 </td>
               </tr>
@@ -360,34 +452,47 @@ const ScheduleManagement = () => {
                 const movieName = movieNameMap.get(s.movieId) || `Movie #${s.movieId}`;
                 const room = rooms.find((r) => r.cinemaRoomId === s.cinemaRoomId);
                 return (
-                  <tr key={s.scheduleId} className="hover:bg-gray-50 transition-colors">
-                    <td className={`${tdClass} text-xs text-gray-500`}>{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
+                  <tr
+                    key={s.scheduleId}
+                    onClick={() => setViewingSchedule(s)}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors cursor-pointer"
+                  >
+                    <td className={`${tdClass} text-xs text-gray-500 dark:text-gray-400`}>{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
                     <td className={tdClass}>
-                      <p className="font-semibold text-gray-900 truncate max-w-[200px]">{movieName}</p>
+                      <p className="font-semibold text-gray-900 dark:text-white truncate max-w-[200px]">{movieName}</p>
                     </td>
                     <td className={tdClass}>{room?.cinemaRoomName || `Phòng #${s.cinemaRoomId}`}</td>
                     <td className={tdClass}>
                       {s.movieFormat
-                        ? <span className="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded bg-indigo-100 text-indigo-700">{s.movieFormat}</span>
-                        : <span className="text-gray-400">—</span>
+                        ? <span className="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300">{s.movieFormat}</span>
+                        : <span className="text-gray-400 dark:text-gray-500">—</span>
                       }
                     </td>
                     <td className={`${tdClass} text-xs`}>{formatTime(s.startTime)}</td>
                     <td className={`${tdClass} text-xs`}>{formatTime(s.endTime)}</td>
                     <td className={tdClass}>
+                      <ScheduleStatusBadge displayStatus={s.displayStatus} />
+                    </td>
+                    <td className={tdClass}>
                       <div className="flex justify-center gap-2">
                         <button
                           type="button"
-                          onClick={() => setEditingSchedule(s)}
-                          className="text-blue-500 hover:text-blue-700 p-1.5 bg-blue-50 hover:bg-blue-100 rounded-md"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingSchedule(s);
+                          }}
+                          className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 p-1.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-md"
                           title="Sửa"
                         >
                           <Edit size={15} />
                         </button>
                         <button
                           type="button"
-                          onClick={() => setDeletingSchedule(s)}
-                          className="text-red-500 hover:text-red-700 p-1.5 bg-red-50 hover:bg-red-100 rounded-md"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingSchedule(s);
+                          }}
+                          className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1.5 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-md"
                           title="Xóa"
                         >
                           <Trash2 size={15} />
@@ -424,23 +529,23 @@ const ScheduleManagement = () => {
   const renderTimelineView = () => {
     if (rooms.length === 0) {
       return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 py-16 text-center text-gray-400">
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 py-16 text-center text-gray-400 dark:text-gray-500">
           Không có phòng chiếu nào.
         </div>
       );
     }
-    const trackWidth = TOTAL_MINUTES * PX_PER_MIN;
+    const trackWidth = axisTotalMinutes * PX_PER_MIN;
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
         <div ref={timelineRef} className="overflow-auto max-h-[65vh]">
           <div className="flex" style={{ minWidth: RAIL_WIDTH + trackWidth }}>
             {/* Room rail (sticky left) */}
             <div
-              className="flex-none sticky left-0 z-20 bg-white border-r border-gray-100"
+              className="flex-none sticky left-0 z-20 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800"
               style={{ width: RAIL_WIDTH }}
             >
               <div
-                className="sticky top-0 z-10 bg-white border-b border-gray-100 flex items-center px-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider"
+                className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex items-center px-3.5 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider"
                 style={{ height: HEADER_HEIGHT }}
               >
                 Phòng
@@ -448,14 +553,14 @@ const ScheduleManagement = () => {
               {rooms.map((room) => (
                 <div
                   key={room.cinemaRoomId}
-                  className="flex flex-col justify-center gap-1 px-3.5 border-b border-gray-100"
+                  className="flex flex-col justify-center gap-1 px-3.5 border-b border-gray-100 dark:border-gray-800"
                   style={{ height: ROW_HEIGHT }}
                 >
-                  <p className="text-[12.5px] font-bold text-gray-700 truncate" title={room.cinemaRoomName}>
+                  <p className="text-[12.5px] font-bold text-gray-700 dark:text-gray-300 truncate" title={room.cinemaRoomName}>
                     {room.cinemaRoomName}
                   </p>
                   {roomFormatBadge(room) && (
-                    <span className="text-[10px] font-bold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 w-fit">
+                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 w-fit">
                       {roomFormatBadge(room)}
                     </span>
                   )}
@@ -467,13 +572,15 @@ const ScheduleManagement = () => {
             <div className="relative flex-1" style={{ minWidth: trackWidth }}>
               {/* Hour axis (sticky top) */}
               <div
-                className="sticky top-0 z-10 bg-white border-b border-gray-100"
+                className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800"
                 style={{ height: HEADER_HEIGHT }}
               >
                 {hourMarks.map((h) => (
                   <div
-                    key={h.label}
-                    className="absolute top-0 bottom-0 flex items-center pl-1.5 border-l border-gray-100 text-[10px] text-gray-400 font-medium"
+                    key={h.left}
+                    className={`absolute top-0 bottom-0 flex items-center pl-1.5 text-[10px] font-medium ${
+                      h.isMidnight ? "border-l-2 border-red-300 dark:border-red-500/50 text-red-500 dark:text-red-400 font-bold" : "border-l border-gray-100 dark:border-gray-800 text-gray-400 dark:text-gray-500"
+                    }`}
                     style={{ left: h.left }}
                   >
                     {h.label}
@@ -486,14 +593,18 @@ const ScheduleManagement = () => {
                 {goldenBands.map((band, i) => (
                   <div
                     key={`golden-${i}`}
-                    className="absolute inset-y-0 bg-[#C00000]/[0.06] pointer-events-none z-0"
-                    style={{ left: band.left, width: band.width }}
+                    className="absolute inset-y-0 pointer-events-none z-0"
+                    style={{
+                      left: band.left,
+                      width: band.width,
+                      backgroundColor: "color-mix(in srgb, var(--cine-gold) 12%, transparent)",
+                    }}
                   />
                 ))}
                 {hourMarks.map((h) => (
                   <div
-                    key={`line-${h.label}`}
-                    className="absolute inset-y-0 border-l border-gray-100 pointer-events-none"
+                    key={`line-${h.left}`}
+                    className={`absolute inset-y-0 pointer-events-none ${h.isMidnight ? "border-l-2 border-red-300 dark:border-red-500/50" : "border-l border-gray-100 dark:border-gray-800"}`}
                     style={{ left: h.left }}
                   />
                 ))}
@@ -502,7 +613,7 @@ const ScheduleManagement = () => {
                   return (
                     <div
                       key={room.cinemaRoomId}
-                      className="relative border-b border-gray-100 cursor-crosshair"
+                      className="relative border-b border-gray-100 dark:border-gray-800 cursor-crosshair"
                       style={{ height: ROW_HEIGHT }}
                       onClick={(e) => handleTimelineClick(e, room)}
                     >
@@ -527,17 +638,17 @@ const ScheduleManagement = () => {
   });
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gray-50 font-sans -m-8 md:-m-10">
+    <div className="flex-1 flex flex-col h-full bg-gray-50 dark:bg-gray-950 font-sans -m-8 md:-m-10 transition-colors duration-300">
       {/* Header */}
-      <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 shrink-0 gap-4">
-        <h2 className="text-xl font-bold text-gray-800 shrink-0">Quản lý lịch chiếu</h2>
+      <header className="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-8 shrink-0 gap-4">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white shrink-0">Quản lý lịch chiếu</h2>
         <div className="flex items-center gap-3 flex-wrap">
           {/* Date navigator */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-full px-2 py-1">
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-1">
             <button
               type="button"
               onClick={() => setSelectedDate((d) => offsetDate(d, -1))}
-              className="p-1 rounded-full hover:bg-gray-200 transition-colors text-gray-600"
+              className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
               aria-label="Ngày trước"
             >
               <ChevronLeft size={16} />
@@ -546,13 +657,13 @@ const ScheduleManagement = () => {
               name="selectedDate"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-transparent text-sm font-semibold text-gray-700 focus:outline-none cursor-pointer w-[92px]"
+              className="bg-transparent text-sm font-semibold text-gray-700 dark:text-gray-300 focus:outline-none cursor-pointer w-[92px]"
               showIcon={false}
             />
             <button
               type="button"
               onClick={() => setSelectedDate((d) => offsetDate(d, 1))}
-              className="p-1 rounded-full hover:bg-gray-200 transition-colors text-gray-600"
+              className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
               aria-label="Ngày sau"
             >
               <ChevronRight size={16} />
@@ -560,14 +671,14 @@ const ScheduleManagement = () => {
           </div>
 
           {/* View toggle */}
-          <div className="flex items-center gap-0 bg-gray-100 rounded-lg p-0.5">
+          <div className="flex items-center gap-0 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
             <button
               type="button"
               onClick={() => setViewMode("timeline")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 viewMode === "timeline"
-                  ? "bg-white text-[#C00000] shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "bg-white dark:bg-gray-900 text-[#C00000] shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               }`}
             >
               <CalendarDays size={14} />
@@ -578,8 +689,8 @@ const ScheduleManagement = () => {
               onClick={() => setViewMode("table")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 viewMode === "table"
-                  ? "bg-white text-[#C00000] shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "bg-white dark:bg-gray-900 text-[#C00000] shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               }`}
             >
               <Table2 size={14} />
@@ -591,7 +702,7 @@ const ScheduleManagement = () => {
           <button
             type="button"
             onClick={() => navigate("/admin/schedules/auto-generate")}
-            className="flex items-center gap-2 bg-white border border-[#C00000] text-[#C00000] hover:bg-red-50 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg transition-colors shrink-0"
+            className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#C00000] text-[#C00000] hover:bg-red-50 dark:hover:bg-red-950/40 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg transition-colors shrink-0"
           >
             <Wand2 size={16} />
             Tạo tự động
@@ -619,50 +730,52 @@ const ScheduleManagement = () => {
       <main className="flex-1 overflow-y-auto p-8">
         {/* Date display */}
         <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Lịch chiếu ngày{" "}
-            <span className="font-semibold text-gray-800 capitalize">{displayDate}</span>
+            <span className="font-semibold text-gray-800 dark:text-white capitalize">{displayDate}</span>
             {" "}—{" "}
             <span className="font-semibold text-[#C00000]">{schedulesOfDay.length} suất chiếu</span>
           </p>
-          {viewMode === "timeline" && goldenBands.length > 0 && (
-            <span className="flex items-center gap-1.5 text-xs text-gray-400">
-              <span className="w-2.5 h-2.5 rounded-sm bg-[#C00000]/25 inline-block" />
-              Giờ vàng
-            </span>
+          {viewMode === "timeline" && (
+            <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
+              {["SCHEDULED", "SHOWING", "ENDED"].map((key) => (
+                <span key={key} className="flex items-center gap-1.5">
+                  <span
+                    className="w-2.5 h-2.5 rounded-sm inline-block"
+                    style={{ backgroundColor: DISPLAY_STATUS_META[key].dotVar }}
+                  />
+                  {SCHEDULE_LABELS[DISPLAY_STATUS_META[key].labelKey]}
+                </span>
+              ))}
+              {goldenBands.length > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="w-2.5 h-2.5 rounded-sm inline-block"
+                    style={{ backgroundColor: "var(--cine-gold)" }}
+                  />
+                  Giờ vàng
+                </span>
+              )}
+            </div>
           )}
         </div>
 
         {errorMessage && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-4 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300">
             {errorMessage}
           </div>
         )}
 
         {viewMode === "table" && (
-          <div className="mb-4 bg-white rounded-xl shadow-sm border border-gray-200 px-5 py-4 flex flex-wrap items-center gap-6">
-            <Filter size={18} className="text-gray-400 shrink-0" />
+          <div className="mb-4 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 px-5 py-4 flex flex-wrap items-center gap-6">
+            <Filter size={18} className="text-gray-400 dark:text-gray-500 shrink-0" />
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-500 uppercase">{SCHEDULE_LABELS.labelMovie}</span>
-              <select
-                value={movieFilter}
-                onChange={(e) => setMovieFilter(e.target.value)}
-                className="bg-gray-100 border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-gray-300 max-w-[180px]"
-              >
-                <option value="ALL">{SCHEDULE_LABELS.filterAll}</option>
-                {activeMovies.map((m) => (
-                  <option key={m.movieId} value={m.movieId}>{m.movieNameVn}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-500 uppercase">{SCHEDULE_LABELS.labelRoom}</span>
+              <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">{SCHEDULE_LABELS.labelRoom}</span>
               <select
                 value={roomFilter}
                 onChange={(e) => setRoomFilter(e.target.value)}
-                className="bg-gray-100 border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-gray-300"
+                className="bg-gray-100 dark:bg-gray-800/60 dark:text-white border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600"
               >
                 <option value="ALL">{SCHEDULE_LABELS.filterAll}</option>
                 {rooms.map((r) => (
@@ -671,11 +784,23 @@ const ScheduleManagement = () => {
               </select>
             </div>
 
+            <div className="relative flex items-center">
+              <Search size={14} className="absolute left-3 text-gray-400 dark:text-gray-500 pointer-events-none" />
+              <input
+                type="text"
+                value={movieSearchKeyword}
+                onChange={handleMovieSearchChange}
+                maxLength={100}
+                placeholder={SCHEDULE_LABELS.searchMoviePlaceholder}
+                className="bg-gray-100 dark:bg-gray-800/60 dark:text-white border-none rounded-lg pl-8 pr-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600 w-52"
+              />
+            </div>
+
             {hasActiveFilters && (
               <button
                 type="button"
                 onClick={clearFilters}
-                className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-[#C00000] transition-colors cursor-pointer"
+                className="flex items-center gap-1 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-[#C00000] transition-colors cursor-pointer"
               >
                 <X size={14} />
                 {SCHEDULE_LABELS.clearFilters}
@@ -685,8 +810,8 @@ const ScheduleManagement = () => {
         )}
 
         {isLoading ? (
-          <div className="bg-white rounded-xl border border-gray-200 flex items-center justify-center h-64">
-            <p className="text-gray-500">Đang tải dữ liệu...</p>
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-center h-64">
+            <p className="text-gray-500 dark:text-gray-400">Đang tải dữ liệu...</p>
           </div>
         ) : viewMode === "timeline" ? (
           renderTimelineView()
@@ -695,7 +820,7 @@ const ScheduleManagement = () => {
         )}
 
         {viewMode === "timeline" && !isLoading && (
-          <p className="mt-2 text-xs text-gray-400">
+          <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
             💡 Click vào ô trống để thêm suất chiếu tại khung giờ đó. Click vào block để chỉnh sửa. Trỏ vào block và bấm dấu "+" góc trên phải để tạo suất tiếp theo ngay sau đó.
           </p>
         )}
@@ -704,7 +829,7 @@ const ScheduleManagement = () => {
       {/* Tooltip */}
       {tooltip && (
         <div
-          className="fixed z-50 pointer-events-none bg-gray-900 text-white text-xs rounded-lg shadow-xl px-3 py-2 space-y-0.5"
+          className="fixed z-50 pointer-events-none bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-xl px-3 py-2 space-y-0.5"
           style={{ top: tooltip.y + 12, left: tooltip.x + 12, maxWidth: 200 }}
         >
           <p className="font-bold truncate">{tooltip.movieName}</p>
@@ -748,6 +873,16 @@ const ScheduleManagement = () => {
           movieName={movieNameMap.get(deletingSchedule.movieId)}
           onClose={() => setDeletingSchedule(null)}
           onSuccess={handleRefresh}
+        />
+      )}
+
+      {viewingSchedule && (
+        <ScheduleDetailModal
+          schedule={viewingSchedule}
+          movieName={movieNameMap.get(viewingSchedule.movieId)}
+          roomName={rooms.find((r) => r.cinemaRoomId === viewingSchedule.cinemaRoomId)?.cinemaRoomName}
+          onClose={() => setViewingSchedule(null)}
+          onEdit={openEditFromDetail}
         />
       )}
     </div>

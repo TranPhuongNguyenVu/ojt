@@ -29,29 +29,27 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // 1. THẢ CỬA TỰ DO: Ai cũng vào được để Đăng nhập, Đăng ký
+                        // 1. THẢ CỬA TỰ DO: Ai cũng vào được để Đăng nhập, Đăng ký, Quên mật khẩu
                         .requestMatchers("/api/auth/**").permitAll()
 
                         // WebSocket STOMP handshake (realtime seat map)
                         .requestMatchers("/ws-seats", "/ws-seats/**").permitAll()
 
-                        // 2. PHÂN QUYỀN ADMIN: Chỉ người có quyền Admin mới được đụng vào các link bắt đầu bằng /api/admin/
-//                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_Admin")
-
-                        // 3. PHÂN QUYỀN STAFF: Chỉ nhân viên rạp phim mới được vào
-                        .requestMatchers("/api/employee/**").hasAuthority("ROLE_Employee")
-
-                        // 4. Employee management API — bắt buộc đăng nhập (chi tiết quyền ở @PreAuthorize)
-                        .requestMatchers("/api/employees/**").authenticated()
-
-                        // 5. Upload API — bắt buộc đăng nhập
-                        .requestMatchers("/api/upload/**").authenticated()
-
-                        // 6. System Admin API — yêu cầu quyền SystemAdmin (chi tiết ở @PreAuthorize)
+                        // 2. PHÂN QUYỀN ADMIN & SYSTEM ADMIN: Các API quản trị hệ thống
+                        .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_Admin", "ROLE_SystemAdmin")
                         .requestMatchers("/api/system-admin/**").hasAuthority("ROLE_SystemAdmin")
+                        .requestMatchers("/api/employees/**").hasAnyAuthority("ROLE_Admin", "ROLE_SystemAdmin")
 
-                        // 7. Profile API — bắt buộc đăng nhập (mọi role đều dùng được)
+                        // 3. PHÂN QUYỀN EMPLOYEE & ADMIN & SYSTEM ADMIN: Các API nghiệp vụ quầy vé
+                        .requestMatchers("/api/employee/**").hasAnyAuthority("ROLE_Employee", "ROLE_Admin", "ROLE_SystemAdmin")
+                        .requestMatchers("/api/members/**").hasAnyAuthority("ROLE_Admin", "ROLE_SystemAdmin", "ROLE_Employee")
+
+                        // 4. Upload & Profile API — bắt buộc đăng nhập
+                        .requestMatchers("/api/upload/**").authenticated()
                         .requestMatchers("/api/profile/**").authenticated()
+
+                        // 5. User Booking Protected Endpoints — bắt buộc đăng nhập
+                        .requestMatchers("/api/booking/history", "/api/booking/points-history", "/api/booking/member-score", "/api/booking/invoice/*/cancel").authenticated()
 
                         .anyRequest().permitAll()
                 )
@@ -64,7 +62,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "https://ojt-nine-alpha.vercel.app"));
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:5173"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);

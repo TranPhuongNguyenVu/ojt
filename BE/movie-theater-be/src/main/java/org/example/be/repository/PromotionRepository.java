@@ -12,11 +12,23 @@ import java.util.List;
 
 @Repository
 public interface PromotionRepository extends JpaRepository<Promotion, Integer> {
-    List<Promotion> findByIsDeletedOrderByStartTimeDesc(Integer isDeleted);
+    List<Promotion> findByStatusNotOrderByStartTimeDesc(PromotionStatus excludedStatus);
+
+    List<Promotion> findAllByOrderByStartTimeDesc();
 
     @Query("""
             select p from Promotion p
-            where p.isDeleted = 0
+            where :keyword is null
+              or lower(p.title) like lower(concat('%', :keyword, '%'))
+              or lower(coalesce(p.content, '')) like lower(concat('%', :keyword, '%'))
+              or lower(coalesce(p.detail, '')) like lower(concat('%', :keyword, '%'))
+            order by p.startTime desc
+            """)
+    List<Promotion> searchAllStatusesForAdmin(@Param("keyword") String keyword);
+
+    @Query("""
+            select p from Promotion p
+            where p.status <> org.example.be.enums.PromotionStatus.DELETED
               and (
                 :keyword is null
                 or lower(p.title) like lower(concat('%', :keyword, '%'))
@@ -27,22 +39,19 @@ public interface PromotionRepository extends JpaRepository<Promotion, Integer> {
             """)
     List<Promotion> searchForAdmin(@Param("keyword") String keyword);
 
-    List<Promotion> findByIsDeletedAndStatusAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-            Integer isDeleted,
+    List<Promotion> findByStatusAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
             PromotionStatus status,
             LocalDateTime startTime,
             LocalDateTime endTime
     );
 
-    List<Promotion> findByIsDeletedAndStatusAndEndTimeBefore(
-            Integer isDeleted,
+    List<Promotion> findByStatusAndEndTimeBefore(
             PromotionStatus status,
             LocalDateTime endTime
     );
 
-    java.util.Optional<Promotion> findByTitleIgnoreCaseAndIsDeletedAndStatus(
+    java.util.Optional<Promotion> findByTitleIgnoreCaseAndStatus(
             String title,
-            Integer isDeleted,
             PromotionStatus status
     );
 }

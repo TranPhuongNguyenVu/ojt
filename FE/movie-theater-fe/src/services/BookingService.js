@@ -53,6 +53,18 @@ const BookingService = {
   // Tạo lại link thanh toán MoMo cho hóa đơn chờ thanh toán
   recreateMomoPayment: (invoiceId) => {
     return AuthService.post(`payment/momo/recreate?invoiceId=${invoiceId}`);
+  },
+  // Tạo link thanh toán qua VNPay
+  createVnPayPayment: (paymentData) => {
+    return AuthService.post("payment/vnpay/create", paymentData);
+  },
+  // Xác minh giao dịch sau khi redirect từ VNPay
+  verifyVnPayReturn: (params) => {
+    return AuthService.get("payment/vnpay/verify-return", { params });
+  },
+  // Tạo lại link thanh toán VNPay cho hóa đơn chờ thanh toán
+  recreateVnPayPayment: (invoiceId) => {
+    return AuthService.post(`payment/vnpay/recreate?invoiceId=${invoiceId}`);
   }
 };
 

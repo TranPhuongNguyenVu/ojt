@@ -71,12 +71,12 @@ const UpdateSeatMapModal = ({ room, onClose, onSuccess }) => {
       <form onSubmit={handleSubmit} noValidate className="flex flex-col overflow-hidden flex-1">
         <div className="p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-bold text-red-700">
+            <div className="rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950/40 px-4 py-2.5 text-xs font-bold text-red-700 dark:text-red-300">
               {error}
             </div>
           )}
 
-          <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 font-bold">
+          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30 px-4 py-3 text-xs text-amber-800 dark:text-amber-300 font-bold">
             ⚠ {CINEMA_ROOM_LABELS.recreateWarning}
           </div>
 
@@ -97,19 +97,19 @@ const UpdateSeatMapModal = ({ room, onClose, onSuccess }) => {
             />
           </div>
 
-          <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase">{CINEMA_ROOM_LABELS.fieldTotalCapacity}</span>
-            <span className="text-sm font-black text-slate-900">
+          <div className="rounded-lg bg-slate-50 dark:bg-gray-800/60 border border-slate-200 dark:border-gray-800 px-4 py-3 flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 dark:text-gray-400 uppercase">{CINEMA_ROOM_LABELS.fieldTotalCapacity}</span>
+            <span className="text-sm font-black text-slate-900 dark:text-white">
               {(form.rows || 0) * (form.columns || 0)} {CINEMA_ROOM_LABELS.seatsSuffix}
             </span>
           </div>
 
           {isDestructive && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 space-y-2">
-              <p className="text-xs font-bold text-red-700">
+            <div className="rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950/40 px-4 py-3 space-y-2">
+              <p className="text-xs font-bold text-red-700 dark:text-red-300">
                 {CINEMA_ROOM_LABELS.resizeDestructiveWarning(customizedSeatCount, couplePairCount)}
               </p>
-              <label className="flex items-start gap-2 text-xs font-bold text-red-800 cursor-pointer">
+              <label className="flex items-start gap-2 text-xs font-bold text-red-800 dark:text-red-300 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isConfirmed}
@@ -121,12 +121,12 @@ const UpdateSeatMapModal = ({ room, onClose, onSuccess }) => {
             </div>
           )}
         </div>
-        <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100 shrink-0">
+        <div className="bg-gray-50 dark:bg-gray-800/60 px-6 py-4 flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800 shrink-0">
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60"
+            className="px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm disabled:opacity-60"
           >
             {COMMON_LABELS.cancel}
           </button>

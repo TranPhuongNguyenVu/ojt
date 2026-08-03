@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import ScrollToTop from "./components/ScrollToTop.jsx";
 import MainDashboard from "./pages/AdminDashboard/MainDashboard.jsx";
 import EmployeeDashboard from "./pages/EmployeeDashboard/EmployeeDashboard.jsx";
 import AdminTemplate from "./templates/AdminTemplate.jsx";
@@ -30,6 +31,7 @@ import ForgotPasswordPage from "./pages/CustomerPage/ForgotPasswordPage.jsx";
 import ProfilePage from "./pages/CustomerPage/ProfilePage.jsx";
 import SelectShowtimePage from "./pages/CustomerPage/SelectShowtimePage.jsx";
 import EmployeeSelectShowtimePage from "./pages/EmployeeDashboard/EmployeeSelectShowtimePage.jsx";
+import EmployeeTicketCheckInPage from "./pages/EmployeeDashboard/EmployeeTicketCheckInPage.jsx";
 import EmployeeBookingSeatPage from "./pages/EmployeeDashboard/EmployeeBookingSeatPage.jsx";
 import EmployeeTicketInformationPage from "./pages/EmployeeDashboard/EmployeeTicketInformationPage.jsx";
 import EmployeeBookingSuccessPage from "./pages/EmployeeDashboard/EmployeeBookingSuccessPage.jsx";
@@ -41,13 +43,26 @@ import BookingSeatPage from "./pages/CustomerPage/BookingSeatPage.jsx";
 import BookingPaymentPage from "./pages/CustomerPage/BookingPaymentPage.jsx";
 import BookingSuccessPage from "./pages/CustomerPage/BookingSuccessPage.jsx";
 import MomoCallbackPage from "./pages/CustomerPage/MomoCallbackPage.jsx";
+import VnPayCallbackPage from "./pages/CustomerPage/VnPayCallbackPage.jsx";
 import MoviesPage from "./pages/CustomerPage/MoviesPage.jsx";
 import ContactPage from "./pages/CustomerPage/ContactPage.jsx";
+import ErrorPage from "./pages/ErrorPage.jsx";
+
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 function App() {
   return (
-    <Routes>
-      <Route path="/admin" element={<AdminTemplate />}>
+    <>
+      <ScrollToTop />
+      <Routes>
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={["Admin", "SystemAdmin"]}>
+            <AdminTemplate />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<Navigate to="statistics" replace />} />
         <Route path="statistics" element={<MainDashboard />} />
         <Route path="customers" element={<CustomerManagement />} />
@@ -68,13 +83,27 @@ function App() {
       </Route>
 
       {/* ─── System Admin routes ─────────────────────────────────────────── */}
-      <Route path="/system-admin" element={<SystemAdminTemplate />}>
+      <Route
+        path="/system-admin"
+        element={
+          <ProtectedRoute allowedRoles={["SystemAdmin"]}>
+            <SystemAdminTemplate />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<Navigate to="admins" replace />} />
         <Route path="admins" element={<AdminManagement />} />
         <Route path="profile" element={<AdminProfile />} />
       </Route>
 
-      <Route path="/employee" element={<EmployeeTemplate />}>
+      <Route
+        path="/employee"
+        element={
+          <ProtectedRoute allowedRoles={["Employee", "Admin", "SystemAdmin"]}>
+            <EmployeeTemplate />
+          </ProtectedRoute>
+        }
+      >
   <Route index element={<Navigate to="statistics" replace />} />
 
   <Route path="statistics" element={<EmployeeDashboard />} />
@@ -98,6 +127,7 @@ function App() {
     element={<EmployeeBookingSuccessPage />}
   />
 
+  <Route path="tickets/checkin" element={<EmployeeTicketCheckInPage />} />
   <Route path="bookings/search" element={<EmployeeSearchBookingPage />} />
   <Route path="tickets/history" element={<EmployeeSalesHistoryPage />} />
   <Route path="movies" element={<EmployeeMovieListPage />} />
@@ -139,8 +169,14 @@ function App() {
           path="payment/momo-callback"
           element={<MomoCallbackPage />}
         />
+        <Route
+          path="payment/vnpay-callback"
+          element={<VnPayCallbackPage />}
+        />
       </Route>
-    </Routes>
+      <Route path="*" element={<ErrorPage />} />
+      </Routes>
+    </>
   );
 }
 

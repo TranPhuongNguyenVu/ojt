@@ -70,9 +70,26 @@ const BookingSeatPage = () => {
   const isHeldByThisTab = (seat) =>
     seat.bookingStatus === 2 && tabHeldSeatIds.has(Number(seat.seatId));
 
-  const isSeatLocked = (seat) =>
-    seat.bookingStatus === 1 ||
-    (seat.bookingStatus === 2 && !tabHeldSeatIds.has(Number(seat.seatId)));
+  /** Ghế đôi: tìm ghế còn lại trong cặp (seatType 2 = ghế đôi) */
+  const getSeatPartner = (seat) => {
+    if (!seat || seat.seatType !== 2 || seat.pairSeatId == null) return null;
+    return seats.find((s) => Number(s.seatId) === Number(seat.pairSeatId)) || null;
+  };
+
+  /** Ghế đôi bị khoá nếu MỘT TRONG HAI ghế của cặp đã đặt/đang được người khác giữ */
+  const isSeatLocked = (seat) => {
+    const selfLocked =
+      seat.bookingStatus === 1 ||
+      (seat.bookingStatus === 2 && !tabHeldSeatIds.has(Number(seat.seatId)));
+    if (selfLocked) return true;
+
+    const partner = getSeatPartner(seat);
+    if (!partner) return false;
+    return (
+      partner.bookingStatus === 1 ||
+      (partner.bookingStatus === 2 && !tabHeldSeatIds.has(Number(partner.seatId)))
+    );
+  };
 
   const markSeatsHeldLocally = (seatIds, reservedBy, reservedAt) => {
     const idSet = new Set(seatIds.map(Number));
@@ -269,18 +286,26 @@ const BookingSeatPage = () => {
   const handleSeatClick = (seat) => {
     if (isSeatLocked(seat) || holdingSeatId != null) return;
 
-    const isSelected = selectedSeats.some((s) => s.seatId === seat.seatId)
-      || tabHeldSeatIds.has(Number(seat.seatId));
+    // Ghế đôi: luôn chọn/bỏ chọn cả cặp cùng lúc
+    const partner = getSeatPartner(seat);
+    const group = partner ? [seat, partner] : [seat];
+    const groupIds = group.map((s) => s.seatId);
 
-    // Bỏ chọn → nhả DRAFT ngay
+    const isSelected = group.some(
+      (s) =>
+        selectedSeats.some((sel) => sel.seatId === s.seatId) ||
+        tabHeldSeatIds.has(Number(s.seatId))
+    );
+
+    // Bỏ chọn → nhả DRAFT ngay (cả cặp ghế đôi)
     if (isSelected) {
       setHoldingSeatId(seat.seatId);
-      BookingService.releaseSeats(scheduleId, [seat.seatId])
+      BookingService.releaseSeats(scheduleId, groupIds)
         .then(() => {
-          const nextHeld = removeTabHeldSeatIds(scheduleId, [seat.seatId]);
+          const nextHeld = removeTabHeldSeatIds(scheduleId, groupIds);
           setTabHeldSeatIds(nextHeld);
-          setSelectedSeats((prev) => prev.filter((s) => s.seatId !== seat.seatId));
-          markSeatsAvailableLocally([seat.seatId]);
+          setSelectedSeats((prev) => prev.filter((s) => !groupIds.includes(s.seatId)));
+          markSeatsAvailableLocally(groupIds);
           setHoldRemainingMs(computeHoldRemaining(nextHeld));
           if (nextHeld.size === 0) clearMomoSeatHold(scheduleId);
         })
@@ -291,14 +316,14 @@ const BookingSeatPage = () => {
       return;
     }
 
-    if (selectedSeats.length >= 8) {
+    if (selectedSeats.length + groupIds.length > 8) {
       alert('Bạn chỉ được chọn tối đa 8 ghế trong một lần đặt vé!');
       return;
     }
 
-    // Chọn ghế → giữ DRAFT ngay; chỉ tab này được gắn ghế đỏ
+    // Chọn ghế → giữ DRAFT ngay cho cả cặp ghế đôi; chỉ tab này được gắn ghế đỏ
     setHoldingSeatId(seat.seatId);
-    BookingService.confirmBooking(scheduleId, [seat.seatId])
+    BookingService.confirmBooking(scheduleId, groupIds)
       .then((res) => {
         if (res.data.status !== 200) {
           throw new Error(res.data.message || 'Không thể giữ ghế');
@@ -306,17 +331,17 @@ const BookingSeatPage = () => {
         const held = res.data.data || {};
         const reservedBy = held.reservedBy || currentAccountId;
         const reservedAt = held.reservedAt || new Date().toISOString();
-        const nextHeld = addTabHeldSeatIds(scheduleId, [seat.seatId]);
+        const nextHeld = addTabHeldSeatIds(scheduleId, groupIds);
         setTabHeldSeatIds(nextHeld);
 
-        const heldSeat = {
-          ...seat,
+        const heldSeats = group.map((s) => ({
+          ...s,
           bookingStatus: 2,
           reservedBy,
           reservedAt,
-        };
-        setSelectedSeats((prev) => [...prev, heldSeat]);
-        markSeatsHeldLocally([seat.seatId], reservedBy, reservedAt);
+        }));
+        setSelectedSeats((prev) => [...prev, ...heldSeats]);
+        markSeatsHeldLocally(groupIds, reservedBy, reservedAt);
         saveMomoSeatHold(scheduleId, [...nextHeld]);
         setHoldRemainingMs(MOMO_HOLD_MS);
       })
@@ -324,7 +349,9 @@ const BookingSeatPage = () => {
         const msg =
           err.response?.data?.message ||
           err.message ||
-          'Ghế đang được người khác giữ! Vui lòng chọn ghế khác.';
+          (partner
+            ? 'Ghế đôi đang được người khác giữ! Vui lòng chọn cặp ghế khác.'
+            : 'Ghế đang được người khác giữ! Vui lòng chọn ghế khác.');
         alert(msg);
         BookingService.getSeatsByScheduleId(scheduleId).then((seatsRes) => {
           const loaded = seatsRes.data.data || [];
@@ -344,19 +371,32 @@ const BookingSeatPage = () => {
   };
 
   const getSeatClass = (seat, isSelected) => {
-    if (seat.bookingStatus === 1) {
+    const partner = getSeatPartner(seat);
+
+    // Đã đặt (chính ghế hoặc ghế còn lại trong cặp đôi)
+    if (seat.bookingStatus === 1 || (partner && partner.bookingStatus === 1)) {
       return 'bg-gray-400 dark:bg-gray-600 text-white/50 cursor-not-allowed';
     }
+
+    const heldByThisTab = isHeldByThisTab(seat) || (partner && isHeldByThisTab(partner));
+    const heldByOther =
+      (seat.bookingStatus === 2 && !tabHeldSeatIds.has(Number(seat.seatId))) ||
+      (partner && partner.bookingStatus === 2 && !tabHeldSeatIds.has(Number(partner.seatId)));
+
     // DRAFT của tab/user khác → vàng, không chọn được
-    if (seat.bookingStatus === 2 && !isHeldByThisTab(seat)) {
+    if (heldByOther && !heldByThisTab) {
       return 'bg-amber-400 text-amber-950 cursor-not-allowed';
     }
     // Ghế tab này đang giữ / đang chọn → đỏ
-    if (isSelected || isHeldByThisTab(seat)) {
+    if (isSelected || heldByThisTab) {
       return 'bg-[#E50914] text-white font-black shadow-md shadow-red-500/20';
     }
-    if (holdingSeatId === seat.seatId) {
+    if (holdingSeatId === seat.seatId || (partner && holdingSeatId === partner.seatId)) {
       return 'bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-100 animate-pulse';
+    }
+    // Ghế đôi (chưa chọn)
+    if (seat.seatType === 2) {
+      return 'bg-white dark:bg-gray-900 border-2 border-pink-500 text-pink-500 hover:bg-pink-50/50 dark:hover:bg-pink-950/30';
     }
     if (seat.seatType === 1) {
       return 'bg-white dark:bg-gray-900 border-2 border-[#E50914] text-[#E50914] hover:bg-red-50/50 dark:hover:bg-red-950/30';
@@ -513,6 +553,47 @@ const BookingSeatPage = () => {
                   .map((rowNum) => {
                     const rowLetter = getRowLetter(rowNum);
                     const { leftSeats, rightSeats } = splitSeatsInRow(seatsByRow[rowNum]);
+                    // Tránh render ghế còn lại của cặp ghế đôi 2 lần trong cùng 1 hàng
+                    const renderedSeatIds = new Set();
+
+                    const renderSeatCell = (seat) => {
+                      if (renderedSeatIds.has(seat.seatId)) return null;
+
+                      const partner = getSeatPartner(seat);
+                      renderedSeatIds.add(seat.seatId);
+                      if (partner) renderedSeatIds.add(partner.seatId);
+
+                      const group = partner ? [seat, partner] : [seat];
+                      const isSelected = group.some((s) =>
+                        selectedSeats.some((sel) => sel.seatId === s.seatId)
+                      );
+                      const label = partner
+                        ? [seat, partner]
+                            .sort(
+                              (a, b) =>
+                                getSeatColumnOrder(a.seatColumn) - getSeatColumnOrder(b.seatColumn)
+                            )
+                            .map((s) => s.seatColumn)
+                            .join('-')
+                        : seat.seatColumn;
+
+                      return (
+                        <label key={seat.seatId} className="relative cursor-pointer">
+                          <input
+                            type="checkbox"
+                            disabled={isSeatLocked(seat) || holdingSeatId != null}
+                            checked={isSelected || isHeldByThisTab(seat) || (partner && isHeldByThisTab(partner))}
+                            onChange={() => handleSeatClick(seat)}
+                            className="sr-only"
+                          />
+                          <span
+                            className={`h-8 ${partner ? 'w-[4.5rem]' : 'w-8'} rounded text-[10px] font-bold flex items-center justify-center transition-all ${getSeatClass(seat, isSelected)}`}
+                          >
+                            {label}
+                          </span>
+                        </label>
+                      );
+                    };
 
                     return (
                       <div key={rowNum} className="flex items-center justify-between">
@@ -520,51 +601,11 @@ const BookingSeatPage = () => {
                           {rowLetter}
                         </span>
 
-                        <div className="flex gap-2">
-                          {leftSeats.map((seat) => {
-                            const isSelected = selectedSeats.some((s) => s.seatId === seat.seatId);
-                            return (
-                              <label key={seat.seatId} className="relative cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  disabled={isSeatLocked(seat) || holdingSeatId != null}
-                                  checked={isSelected || isHeldByThisTab(seat)}
-                                  onChange={() => handleSeatClick(seat)}
-                                  className="sr-only"
-                                />
-                                <span
-                                  className={`w-8 h-8 rounded text-[10px] font-bold flex items-center justify-center transition-all ${getSeatClass(seat, isSelected)}`}
-                                >
-                                  {seat.seatColumn}
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
+                        <div className="flex gap-2">{leftSeats.map(renderSeatCell)}</div>
 
                         <div className="w-8"></div>
 
-                        <div className="flex gap-2">
-                          {rightSeats.map((seat) => {
-                            const isSelected = selectedSeats.some((s) => s.seatId === seat.seatId);
-                            return (
-                              <label key={seat.seatId} className="relative cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  disabled={isSeatLocked(seat) || holdingSeatId != null}
-                                  checked={isSelected || isHeldByThisTab(seat)}
-                                  onChange={() => handleSeatClick(seat)}
-                                  className="sr-only"
-                                />
-                                <span
-                                  className={`w-8 h-8 rounded text-[10px] font-bold flex items-center justify-center transition-all ${getSeatClass(seat, isSelected)}`}
-                                >
-                                  {seat.seatColumn}
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
+                        <div className="flex gap-2">{rightSeats.map(renderSeatCell)}</div>
 
                         <span className="w-6 text-xs font-bold text-gray-400 dark:text-gray-500 text-center">
                           {rowLetter}
@@ -587,6 +628,10 @@ const BookingSeatPage = () => {
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 rounded bg-white dark:bg-gray-900 border-2 border-[#E50914]"></div>
                 <span>VIP</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 rounded bg-white dark:bg-gray-900 border-2 border-pink-500"></div>
+                <span>GHẾ ĐÔI</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 rounded bg-[#E50914]"></div>
@@ -674,7 +719,7 @@ const BookingSeatPage = () => {
             <p className="text-[9px] text-gray-400 dark:text-gray-500 text-center leading-relaxed">
               Bằng việc nhấn tiếp tục, bạn đồng ý với các <br />
               <span className="underline hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">
-                điều khoản của Noir Cinema
+                điều khoản của Cinema Elite
               </span>
               .
             </p>

@@ -98,17 +98,17 @@ const ForgotPasswordPage = () => {
       className="w-full min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat relative px-4 py-12 font-sans"
       style={{ backgroundImage: `url(${bgHero})` }}
     >
-      <div className="absolute inset-0 bg-white/80 backdrop-blur-sm"></div>
+      <div className="absolute inset-0 bg-white/80 dark:bg-black/60 backdrop-blur-sm"></div>
 
-      <div className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-8 md:p-10 flex flex-col items-center">
-        
+      <div className="relative z-10 w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 p-8 md:p-10 flex flex-col items-center">
+
         {/* Tiêu đề & Icon bảo mật */}
         <div className="text-center space-y-2 mb-8">
-          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ShieldCheck size={32} className="text-[#C00000]" strokeWidth={2} />
+          <div className="w-16 h-16 bg-red-50 dark:bg-red-950/40 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck size={32} className="text-[#C00000] dark:text-[#E50914]" strokeWidth={2} />
           </div>
-          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Quên mật khẩu</h2>
-          <p className="text-gray-400 text-xs md:text-sm leading-relaxed max-w-[280px] mx-auto font-medium">
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Quên mật khẩu</h2>
+          <p className="text-gray-400 dark:text-gray-500 text-xs md:text-sm leading-relaxed max-w-[280px] mx-auto font-medium">
             {step === 1 && "Nhập email của bạn để nhận mã OTP khôi phục mật khẩu"}
             {step === 2 && `Nhập mã OTP 6 chữ số đã được gửi tới email: ${email}`}
             {step === 3 && "Mã OTP chính xác! Vui lòng thiết lập mật khẩu mới của bạn"}
@@ -119,9 +119,9 @@ const ForgotPasswordPage = () => {
         {step === 1 && (
           <form className="w-full space-y-5" onSubmit={handleSendOtp}>
             <div className="space-y-1.5 text-left">
-              <label className="text-[10px] font-black tracking-widest text-gray-400 uppercase block">EMAIL ĐĂNG KÝ</label>
+              <label className="text-[10px] font-black tracking-widest text-gray-400 dark:text-gray-500 uppercase block">EMAIL ĐĂNG KÝ</label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                   <Mail size={16} strokeWidth={2} />
                 </span>
                 <input
@@ -129,23 +129,23 @@ const ForgotPasswordPage = () => {
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setErrorMessage(""); }}
                   placeholder="Nhập email..."
-                  className="w-full bg-white text-sm text-gray-800 pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 transition-all placeholder-gray-300"
+                  className="w-full bg-white dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-200 pl-11 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-500 transition-all placeholder-gray-300 dark:placeholder-gray-500"
                 />
               </div>
             </div>
 
             {errorMessage && (
-              <div className="flex items-center p-3 text-[13px] font-semibold text-[#C00000] bg-red-50/80 border border-red-100 rounded-xl transition-all">
+              <div className="flex items-center p-3 text-[13px] font-semibold text-[#C00000] dark:text-red-300 bg-red-50/80 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 rounded-xl transition-all">
                 <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
                 {errorMessage}
               </div>
             )}
 
             <div className="pt-2">
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#C00000] text-white font-bold text-sm py-3.5 rounded-xl hover:bg-[#a00000] active:scale-[0.99] transition-all shadow-md shadow-red-900/10 disabled:bg-gray-300"
+                className="w-full bg-[#C00000] dark:bg-[#E50914] text-white font-bold text-sm py-3.5 rounded-xl hover:bg-[#a00000] dark:hover:bg-[#ff1a25] active:scale-[0.99] transition-all shadow-md shadow-red-900/10 disabled:bg-gray-300 dark:disabled:bg-gray-700"
               >
                 {isLoading ? 'Đang gửi mã...' : 'Gửi mã OTP'}
               </button>
@@ -157,29 +157,29 @@ const ForgotPasswordPage = () => {
         {step === 2 && (
           <form className="w-full space-y-5" onSubmit={handleVerifyOtp}>
             <div className="space-y-1.5 text-left">
-              <label className="text-[10px] font-black tracking-widest text-gray-400 uppercase block">MÃ XÁC THỰC OTP</label>
+              <label className="text-[10px] font-black tracking-widest text-gray-400 dark:text-gray-500 uppercase block">MÃ XÁC THỰC OTP</label>
               <input
                 type="text"
                 value={otpCode}
                 onChange={(e) => { setOtpCode(e.target.value); setErrorMessage(""); }}
                 placeholder="Nhập 6 số OTP..."
                 maxLength={6}
-                className="w-full bg-white text-sm text-gray-800 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 transition-all placeholder-gray-300 tracking-widest text-center font-bold text-lg"
+                className="w-full bg-white dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-200 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-500 transition-all placeholder-gray-300 dark:placeholder-gray-500 tracking-widest text-center font-bold text-lg"
               />
             </div>
 
             {errorMessage && (
-              <div className="flex items-center p-3 text-[13px] font-semibold text-[#C00000] bg-red-50/80 border border-red-100 rounded-xl transition-all">
+              <div className="flex items-center p-3 text-[13px] font-semibold text-[#C00000] dark:text-red-300 bg-red-50/80 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 rounded-xl transition-all">
                 <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
                 {errorMessage}
               </div>
             )}
 
             <div className="pt-2">
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#C00000] text-white font-bold text-sm py-3.5 rounded-xl hover:bg-[#a00000] active:scale-[0.99] transition-all shadow-md shadow-red-900/10 disabled:bg-gray-300"
+                className="w-full bg-[#C00000] dark:bg-[#E50914] text-white font-bold text-sm py-3.5 rounded-xl hover:bg-[#a00000] dark:hover:bg-[#ff1a25] active:scale-[0.99] transition-all shadow-md shadow-red-900/10 disabled:bg-gray-300 dark:disabled:bg-gray-700"
               >
                 {isLoading ? 'Đang xác minh...' : 'Xác minh mã OTP'}
               </button>
@@ -191,9 +191,9 @@ const ForgotPasswordPage = () => {
         {step === 3 && (
           <form className="w-full space-y-5" onSubmit={handleResetPassword}>
             <div className="space-y-1.5 text-left">
-              <label className="text-[10px] font-black tracking-widest text-gray-400 uppercase block">MẬT KHẨU MỚI</label>
+              <label className="text-[10px] font-black tracking-widest text-gray-400 dark:text-gray-500 uppercase block">MẬT KHẨU MỚI</label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                   <Lock size={16} strokeWidth={2} />
                 </span>
                 <input
@@ -201,15 +201,15 @@ const ForgotPasswordPage = () => {
                   value={newPassword}
                   onChange={(e) => { setNewPassword(e.target.value); setErrorMessage(""); }}
                   placeholder="Mật khẩu mới..."
-                  className="w-full bg-white text-sm text-gray-800 pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 transition-all placeholder-gray-300"
+                  className="w-full bg-white dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-200 pl-11 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-500 transition-all placeholder-gray-300 dark:placeholder-gray-500"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5 text-left">
-              <label className="text-[10px] font-black tracking-widest text-gray-400 uppercase block">XÁC NHẬN MẬT KHẨU</label>
+              <label className="text-[10px] font-black tracking-widest text-gray-400 dark:text-gray-500 uppercase block">XÁC NHẬN MẬT KHẨU</label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
                   <Lock size={16} strokeWidth={2} />
                 </span>
                 <input
@@ -217,23 +217,23 @@ const ForgotPasswordPage = () => {
                   value={confirmPassword}
                   onChange={(e) => { setConfirmPassword(e.target.value); setErrorMessage(""); }}
                   placeholder="Nhập lại mật khẩu..."
-                  className="w-full bg-white text-sm text-gray-800 pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 transition-all placeholder-gray-300"
+                  className="w-full bg-white dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-200 pl-11 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-500 transition-all placeholder-gray-300 dark:placeholder-gray-500"
                 />
               </div>
             </div>
 
             {errorMessage && (
-              <div className="flex items-center p-3 text-[13px] font-semibold text-[#C00000] bg-red-50/80 border border-red-100 rounded-xl transition-all">
+              <div className="flex items-center p-3 text-[13px] font-semibold text-[#C00000] dark:text-red-300 bg-red-50/80 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 rounded-xl transition-all">
                 <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
                 {errorMessage}
               </div>
             )}
 
             <div className="pt-2">
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#C00000] text-white font-bold text-sm py-3.5 rounded-xl hover:bg-[#a00000] active:scale-[0.99] transition-all shadow-md shadow-red-900/10 disabled:bg-gray-300"
+                className="w-full bg-[#C00000] dark:bg-[#E50914] text-white font-bold text-sm py-3.5 rounded-xl hover:bg-[#a00000] dark:hover:bg-[#ff1a25] active:scale-[0.99] transition-all shadow-md shadow-red-900/10 disabled:bg-gray-300 dark:disabled:bg-gray-700"
               >
                 {isLoading ? 'Đang đặt lại...' : 'Xác nhận đổi mật khẩu'}
               </button>
@@ -242,8 +242,8 @@ const ForgotPasswordPage = () => {
         )}
 
         {/* Nút quay lại điều hướng */}
-        <div className="mt-8 text-xs font-medium text-gray-400">
-          <button 
+        <div className="mt-8 text-xs font-medium text-gray-400 dark:text-gray-500">
+          <button
             type="button"
             onClick={() => {
               if (step === 2) {
@@ -255,10 +255,10 @@ const ForgotPasswordPage = () => {
               } else {
                 navigate('/login');
               }
-            }} 
-            className="flex items-center text-gray-400 hover:text-gray-700 transition-colors"
+            }}
+            className="flex items-center text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
           >
-            <ArrowLeft size={16} className="mr-1" /> 
+            <ArrowLeft size={16} className="mr-1" />
             {step === 1 && 'Quay lại đăng nhập'}
             {step === 2 && 'Quay lại nhập Email'}
             {step === 3 && 'Quay lại nhập OTP'}

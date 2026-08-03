@@ -1,31 +1,12 @@
 import React from 'react';
 import { Award, Zap } from 'lucide-react';
+import { getMembershipTier } from '../../utils/membershipTier';
 
 const RewardPointsCard = ({ memberData }) => {
   const currentPoints = memberData?.score || 0;
-  
+
   // Tự động phân hạng & tính tiến trình lên hạng tiếp theo
-  let tier = 'Standard';
-  let nextTier = 'Silver';
-  let targetPoints = 1000;
-  
-  if (currentPoints >= 5000) {
-    tier = 'Platinum';
-    nextTier = 'Max';
-    targetPoints = currentPoints;
-  } else if (currentPoints >= 2000) {
-    tier = 'Gold';
-    nextTier = 'Platinum';
-    targetPoints = 5000;
-  } else if (currentPoints >= 1000) {
-    tier = 'Silver';
-    nextTier = 'Gold';
-    targetPoints = 2000;
-  } else {
-    tier = 'Standard';
-    nextTier = 'Silver';
-    targetPoints = 1000;
-  }
+  const { tier, nextTier, targetPoints } = getMembershipTier(currentPoints);
 
   const percentage = targetPoints > 0 ? Math.min((currentPoints / targetPoints) * 100, 100) : 100;
 

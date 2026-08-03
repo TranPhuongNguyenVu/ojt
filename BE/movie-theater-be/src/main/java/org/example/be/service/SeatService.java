@@ -4,6 +4,7 @@ import org.example.be.dto.*;
 import org.example.be.entity.CinemaRoom;
 import org.example.be.entity.Seat;
 import org.example.be.entity.Version;
+import org.example.be.enums.SeatStatus;
 import org.example.be.exception.GlobalExceptionHandler.InvalidCoupleSeatPairException;
 import org.example.be.mapper.CinemaRoomMapper;
 import org.example.be.mapper.SeatMapper;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -66,7 +68,7 @@ public class SeatService {
     public CinemaRoomDetailDTO recreateSeatMap(Integer id, RecreateSeatMapRequest request) {
         CinemaRoom room = findRoomOrThrow(id);
 
-        if (scheduleRepository.existsByCinemaRoomId(id)) {
+        if (scheduleRepository.existsUpcomingByCinemaRoomId(id, LocalDateTime.now())) {
             throw new IllegalStateException("Không thể cập nhật cấu hình ghế của phòng đang có lịch chiếu.");
         }
 
@@ -91,7 +93,7 @@ public class SeatService {
                         .seatColumn(getColumnLetter(c - 1))
                         .seatRow(r)
                         .seatType(SEAT_TYPE_NORMAL)
-                        .status(Seat.STATUS_ACTIVE)
+                        .status(SeatStatus.ACTIVE)
                         .build());
             }
         }
@@ -108,6 +110,20 @@ public class SeatService {
         CinemaRoom room = findRoomOrThrow(request.getCinemaRoomId());
 
         if (Boolean.TRUE.equals(request.getRecreate())) {
+            if (scheduleRepository.existsUpcomingByCinemaRoomId(request.getCinemaRoomId(), LocalDateTime.now())) {
+                throw new IllegalStateException("Không thể cập nhật cấu hình ghế của phòng đang có lịch chiếu.");
+            }
+
+            long bookedCount = seatRepository.countActiveBookedSeats(request.getCinemaRoomId());
+            int newCapacity = request.getSeats().size();
+            if (newCapacity < bookedCount) {
+                throw new IllegalArgumentException(
+                        "There are " + bookedCount + " seats currently held or booked for upcoming schedules, " +
+                                "please resolve them before shrinking the seat map. " +
+                                "(New map: " + newCapacity + " seats)"
+                );
+            }
+
             seatRepository.deleteByCinemaRoomId(request.getCinemaRoomId());
 
             List<Seat> newSeats = new ArrayList<>();
@@ -119,7 +135,7 @@ public class SeatService {
                         .seatRow(item.getSeatRow())
                         .seatType(type)
                         .pairSeatId(item.getPairSeatId())
-                        .status(item.getStatus() != null ? item.getStatus() : Seat.STATUS_ACTIVE)
+                        .status(item.getStatus() != null ? SeatStatus.valueOf(item.getStatus()) : SeatStatus.ACTIVE)
                         .build());
             }
             seatRepository.saveAll(newSeats);
@@ -133,8 +149,9 @@ public class SeatService {
                     .orElseThrow(() -> new IllegalArgumentException(
                             "Seat ID " + item.getSeatId() + " does not exist in this room."));
 
+            SeatStatus requestedStatus = item.getStatus() != null ? SeatStatus.valueOf(item.getStatus()) : null;
             boolean typeOrStatusChanged = !Objects.equals(seat.getSeatType(), item.getSeatType())
-                    || !Objects.equals(seat.getStatus(), item.getStatus());
+                    || !Objects.equals(seat.getStatus(), requestedStatus);
             boolean pairChanged = !Objects.equals(seat.getPairSeatId(), item.getPairSeatId());
 
             if ((typeOrStatusChanged || pairChanged) && seatRepository.isSeatActivelyBooked(seat.getSeatId())) {
@@ -145,7 +162,7 @@ public class SeatService {
 
             seat.setSeatType(item.getSeatType());
             seat.setPairSeatId(item.getPairSeatId());
-            seat.setStatus(item.getStatus() != null ? item.getStatus() : Seat.STATUS_ACTIVE);
+            seat.setStatus(requestedStatus != null ? requestedStatus : SeatStatus.ACTIVE);
             seatsToUpdate.add(seat);
         }
 
@@ -172,7 +189,7 @@ public class SeatService {
                         .seatColumn(colLetter)
                         .seatRow(r)
                         .seatType(requestSeat != null ? requestSeat.getSeatType() : SEAT_TYPE_NORMAL)
-                        .status(requestSeat != null ? Seat.STATUS_ACTIVE : Seat.STATUS_AISLE)
+                        .status(requestSeat != null ? SeatStatus.ACTIVE : SeatStatus.AISLE)
                         .build());
             }
         }
@@ -278,7 +295,7 @@ public class SeatService {
     }
 
     private static boolean isAisle(Seat seat) {
-        return Seat.STATUS_AISLE.equals(seat.getStatus());
+        return seat.getStatus() == SeatStatus.AISLE;
     }
 
     private static int columnIndexOf(Seat seat) {

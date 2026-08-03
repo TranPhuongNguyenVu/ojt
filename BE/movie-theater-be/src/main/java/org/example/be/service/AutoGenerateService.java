@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,6 +61,10 @@ public class AutoGenerateService {
     private static final int MIN_RATIO = 1;
     private static final int MAX_RATIO = 5;
 
+    private static final int MIN_FORMAT_RATIO = 1;
+    private static final int MAX_FORMAT_RATIO = 20;
+    private static final String TOKEN_SEP = "::";
+
     @Autowired
     private MovieRepository movieRepository;
 
@@ -78,20 +83,21 @@ public class AutoGenerateService {
     @Autowired
     private PricingService pricingService;
 
-    /** Resolved per-movie configuration for a single generation run. */
     static class MovieConfig {
+        String token;
         String movieId;
         String movieName;
         int runtime;
         Version version;
-        int ratio;
+        double comboWeight;
+        Set<Integer> allowedRoomIds;
         LocalDate fromDate;
         LocalDate toDate;
     }
 
     /** A candidate slot placed by the packing heuristic, before DB validation. */
     static class PlacedEvent {
-        String movieId;
+        String token;
         int startMin;
         int durMin;
     }
@@ -109,6 +115,8 @@ public class AutoGenerateService {
         int showsPerDay = orDefault(request.getShowsPerDayPerRoom(), DEFAULT_SHOWS_PER_DAY_PER_ROOM);
         int maxMoviesPerRoom = orDefault(request.getMaxMoviesPerRoom(), DEFAULT_MAX_MOVIES_PER_ROOM);
         int gapCleanup = orDefault(request.getGapCleanup(), DEFAULT_GAP_CLEANUP);
+        Set<Integer> allowInsertIntoBusyDayRoomIds = request.getAllowInsertIntoBusyDayRoomIds() != null
+                ? new HashSet<>(request.getAllowInsertIntoBusyDayRoomIds()) : Collections.emptySet();
 
         LocalDate today = LocalDate.now();
         LocalDate minDate = today.plusDays(MIN_DAYS_AHEAD);
@@ -118,13 +126,14 @@ public class AutoGenerateService {
         LocalDate endDate = request.getEndDate() != null && request.getEndDate().isBefore(maxDate)
                 ? request.getEndDate() : maxDate;
 
-        List<Movie> movies = resolveMovies(request.getMovieIds());
+        List<Movie> movies = resolveMovies(request.getMovieIds(), startDate, endDate);
         List<CinemaRoom> rooms = resolveRooms(request.getRoomIds()).stream()
                 .filter(room -> room.getStatus() == CinemaRoomStatus.ACTIVE)
                 .filter(room -> room.getFormats() != null && !room.getFormats().isEmpty())
                 .collect(Collectors.toList());
 
-        Map<String, MovieConfig> movieConfigs = buildMovieConfigs(movies, request.getMovieVersions(), request.getMovieRatios());
+        Map<String, MovieConfig> movieConfigs = buildMovieConfigs(movies, request.getMovieRatios(),
+                request.getMovieFormatRatios(), request.getMovieRoomIds(), request.getRoomIds());
         List<String> incompatibleMovieWarnings = findIncompatibleMovies(movieConfigs, rooms);
 
         Map<Integer, Integer> roomIndexByRoomId = new LinkedHashMap<>();
@@ -147,7 +156,9 @@ public class AutoGenerateService {
 
             List<CinemaRoom> availableRooms = new ArrayList<>();
             for (CinemaRoom room : rooms) {
-                if (busyRoomDays.contains(roomDayKey(day, room.getCinemaRoomId()))) {
+                boolean busy = busyRoomDays.contains(roomDayKey(day, room.getCinemaRoomId()));
+                boolean allowForThisRoom = allowInsertIntoBusyDayRoomIds.contains(room.getCinemaRoomId());
+                if (busy && !allowForThisRoom) {
                     skippedRoomDays.add(SkippedRoomDayDTO.builder()
                             .date(day)
                             .cinemaRoomId(room.getCinemaRoomId())
@@ -172,7 +183,7 @@ public class AutoGenerateService {
 
             int totalSlots = showsPerDay * availableRooms.size();
             List<Weight> weights = dayMovies.stream()
-                    .map(mc -> new Weight(mc.movieId, mc.ratio))
+                    .map(mc -> new Weight(mc.token, mc.comboWeight))
                     .collect(Collectors.toList());
             List<String> tokens = interleave(allocateCounts(totalSlots, weights));
 
@@ -186,8 +197,12 @@ public class AutoGenerateService {
                     continue;
                 }
                 int roomIndex = roomIndexByRoomId.getOrDefault(room.getCinemaRoomId(), 0);
+                boolean intoBusyDay = busyRoomDays.contains(roomDayKey(day, room.getCinemaRoomId()));
+                List<int[]> roomBusy = intoBusyDay
+                        ? seedRoomBusy(existingInRange, day, room.getCinemaRoomId())
+                        : Collections.emptyList();
                 packRoomDay(room, seq, movieConfigs, day, openTime, closeTime, goldenRules,
-                        gapCleanup, roomIndex, movieBusy, accepted, rejected);
+                        gapCleanup, roomIndex, movieBusy, roomBusy, intoBusyDay, accepted, rejected);
             }
         }
 
@@ -237,8 +252,8 @@ public class AutoGenerateService {
             distinct.put(room.getCinemaRoomId(), new LinkedHashSet<>());
         }
 
-        for (String movieId : tokens) {
-            MovieConfig mc = movieConfigs.get(movieId);
+        for (String token : tokens) {
+            MovieConfig mc = movieConfigs.get(token);
             if (mc == null) {
                 continue;
             }
@@ -249,10 +264,13 @@ public class AutoGenerateService {
                 if (!roomSupports(room, mc)) {
                     continue;
                 }
+                if (mc.allowedRoomIds != null && !mc.allowedRoomIds.contains(roomId)) {
+                    continue;
+                }
                 if (seqs.get(roomId).size() >= showsPerDay) {
                     continue;
                 }
-                boolean alreadyInRoom = distinct.get(roomId).contains(movieId);
+                boolean alreadyInRoom = distinct.get(roomId).contains(mc.movieId);
                 if (!alreadyInRoom && distinct.get(roomId).size() >= maxMoviesPerRoom) {
                     continue;
                 }
@@ -265,17 +283,23 @@ public class AutoGenerateService {
             if (best == null) {
                 continue;
             }
-            seqs.get(best.getCinemaRoomId()).add(movieId);
-            distinct.get(best.getCinemaRoomId()).add(movieId);
+            seqs.get(best.getCinemaRoomId()).add(token);
+            distinct.get(best.getCinemaRoomId()).add(mc.movieId);
         }
+
+        Map<String, List<MovieConfig>> entriesByMovieId = movieConfigs.values().stream()
+                .collect(Collectors.groupingBy(mc -> mc.movieId, LinkedHashMap::new, Collectors.toList()));
 
         for (CinemaRoom room : rooms) {
             List<String> seq = seqs.get(room.getCinemaRoomId());
             List<String> pool = distinct.get(room.getCinemaRoomId()).stream()
-                    .map(movieConfigs::get)
+                    .map(movieId -> entriesByMovieId.getOrDefault(movieId, Collections.<MovieConfig>emptyList()).stream()
+                            .filter(mc -> roomSupports(room, mc))
+                            .max(Comparator.comparingDouble(mc -> mc.comboWeight))
+                            .orElse(null))
                     .filter(Objects::nonNull)
-                    .sorted(Comparator.<MovieConfig>comparingInt(mc -> mc.ratio).reversed())
-                    .map(mc -> mc.movieId)
+                    .sorted(Comparator.<MovieConfig>comparingDouble(mc -> mc.comboWeight).reversed())
+                    .map(mc -> mc.token)
                     .collect(Collectors.toList());
             if (pool.isEmpty()) {
                 continue;
@@ -292,11 +316,12 @@ public class AutoGenerateService {
     private Map<String, List<int[]>> seedMovieBusy(List<Schedule> existingInRange, LocalDate day,
                                                     Map<String, MovieConfig> movieConfigs) {
         Map<String, List<int[]>> movieBusy = new HashMap<>();
+        Set<String> activeMovieIds = movieConfigs.values().stream().map(mc -> mc.movieId).collect(Collectors.toSet());
         for (Schedule s : existingInRange) {
             if (s.getStartTime() == null || s.getEndTime() == null || s.getMovieId() == null) {
                 continue;
             }
-            if (!s.getStartTime().toLocalDate().equals(day) || !movieConfigs.containsKey(s.getMovieId())) {
+            if (!s.getStartTime().toLocalDate().equals(day) || !activeMovieIds.contains(s.getMovieId())) {
                 continue;
             }
             int startMin = s.getStartTime().getHour() * 60 + s.getStartTime().getMinute();
@@ -304,6 +329,27 @@ public class AutoGenerateService {
             movieBusy.computeIfAbsent(s.getMovieId(), k -> new ArrayList<>()).add(new int[]{startMin, endMin});
         }
         return movieBusy;
+    }
+
+    /** Existing schedules' time intervals for one room on one day, used to avoid overlapping them when inserting into an already-busy room-day. */
+    static List<int[]> seedRoomBusy(List<Schedule> existingInRange, LocalDate day, Integer roomId) {
+        List<int[]> busy = new ArrayList<>();
+        for (Schedule s : existingInRange) {
+            if (s.getStartTime() == null || s.getEndTime() == null || s.getCinemaRoomId() == null) {
+                continue;
+            }
+            if (!s.getStartTime().toLocalDate().equals(day) || !s.getCinemaRoomId().equals(roomId)) {
+                continue;
+            }
+            int startMin = s.getStartTime().getHour() * 60 + s.getStartTime().getMinute();
+            int endMin = startMin + (int) Duration.between(s.getStartTime(), s.getEndTime()).toMinutes();
+            // ScheduleService.validateOverlap also requires the existing schedule's own buffer
+            // gap after it; matching that here avoids packing a slot that looks free but gets
+            // rejected once buildValidatedSchedule re-checks it for real.
+            int existingBuffer = s.getBufferTime() != null ? s.getBufferTime() : DEFAULT_GAP_CLEANUP;
+            busy.add(new int[]{startMin, endMin + existingBuffer});
+        }
+        return busy;
     }
 
     /**
@@ -369,15 +415,16 @@ public class AutoGenerateService {
     private void packRoomDay(CinemaRoom room, List<String> seq, Map<String, MovieConfig> movieById, LocalDate day,
                               LocalTime openTime, LocalTime closeTime, List<GoldenHourConfig> goldenRules,
                               int gapCleanup, int roomIndex, Map<String, List<int[]>> movieBusy,
+                              List<int[]> roomBusy, boolean intoBusyDay,
                               List<ScheduleCandidateDTO> accepted, List<ScheduleCandidateDTO> rejected) {
         int openMin = toMin(openTime);
         int lastStartMin = toMin(closeTime);
 
         int phase = (roomIndex * STAGGER_STEP) % 40;
-        List<PlacedEvent> allEvents = placeContinuously(seq, openMin + phase, lastStartMin, gapCleanup, movieById, movieBusy);
+        List<PlacedEvent> allEvents = placeContinuously(seq, openMin + phase, lastStartMin, gapCleanup, movieById, movieBusy, roomBusy);
 
         for (PlacedEvent placed : allEvents) {
-            MovieConfig movie = movieById.get(placed.movieId);
+            MovieConfig movie = movieById.get(placed.token);
             LocalDateTime start = LocalDateTime.of(day, LocalTime.MIDNIGHT).plusMinutes(placed.startMin);
             GoldenHourConfig goldenRule = pricingService.bestMatchingRule(start, goldenRules);
             boolean golden = goldenRule != null;
@@ -402,6 +449,7 @@ public class AutoGenerateService {
                     .bufferTime(gapCleanup)
                     .goldenHour(golden)
                     .goldenHourExtra(golden ? goldenRule.getExtraPrice() : null)
+                    .insertedIntoBusyDay(intoBusyDay)
                     .build();
 
             try {
@@ -417,12 +465,12 @@ public class AutoGenerateService {
     }
 
     /** Largest-remainder distribution of `total` slots across weighted keys. */
-    private Map<String, Integer> allocateCounts(int total, List<Weight> weights) {
+    Map<String, Integer> allocateCounts(int total, List<Weight> weights) {
         Map<String, Integer> result = new LinkedHashMap<>();
         if (total <= 0 || weights.isEmpty()) {
             return result;
         }
-        int sumW = weights.stream().mapToInt(w -> w.weight).sum();
+        double sumW = weights.stream().mapToDouble(w -> w.weight).sum();
         if (sumW <= 0) {
             sumW = 1;
         }
@@ -480,12 +528,22 @@ public class AutoGenerateService {
      */
     static List<PlacedEvent> placeContinuously(List<String> seq, int windowStart, int windowEnd,
                                                 int gapCleanup, Map<String, MovieConfig> movieById) {
-        return placeContinuously(seq, windowStart, windowEnd, gapCleanup, movieById, new HashMap<>());
+        return placeContinuously(seq, windowStart, windowEnd, gapCleanup, movieById, new HashMap<>(), Collections.emptyList());
     }
 
     static List<PlacedEvent> placeContinuously(List<String> seq, int windowStart, int windowEnd,
                                                 int gapCleanup, Map<String, MovieConfig> movieById,
                                                 Map<String, List<int[]>> movieBusy) {
+        return placeContinuously(seq, windowStart, windowEnd, gapCleanup, movieById, movieBusy, Collections.emptyList());
+    }
+
+    /**
+     * @param roomBusy time intervals already occupied in this room on this day (regardless of
+     *                 movie), e.g. from a pre-existing schedule the caller chose not to skip.
+     */
+    static List<PlacedEvent> placeContinuously(List<String> seq, int windowStart, int windowEnd,
+                                                int gapCleanup, Map<String, MovieConfig> movieById,
+                                                Map<String, List<int[]>> movieBusy, List<int[]> roomBusy) {
         List<PlacedEvent> events = new ArrayList<>();
         List<String> remaining = new ArrayList<>(seq);
         int cursor = windowStart;
@@ -500,7 +558,8 @@ public class AutoGenerateService {
                     i--;
                     continue;
                 }
-                int start = earliestWithoutMovieConflict(base, movie.runtime, movieBusy.get(remaining.get(i)));
+                List<int[]> busy = combineBusy(movieBusy.get(movie.movieId), roomBusy);
+                int start = earliestWithoutMovieConflict(base, movie.runtime, busy);
                 if (start + movie.runtime > windowEnd) {
                     continue;
                 }
@@ -515,18 +574,31 @@ public class AutoGenerateService {
             if (bestIdx < 0) {
                 break;
             }
-            String movieId = remaining.remove(bestIdx);
-            MovieConfig movie = movieById.get(movieId);
+            String token = remaining.remove(bestIdx);
+            MovieConfig movie = movieById.get(token);
             PlacedEvent event = new PlacedEvent();
-            event.movieId = movieId;
+            event.token = token;
             event.startMin = bestStart;
             event.durMin = movie.runtime;
             events.add(event);
-            movieBusy.computeIfAbsent(movieId, k -> new ArrayList<>())
+            movieBusy.computeIfAbsent(movie.movieId, k -> new ArrayList<>())
                     .add(new int[]{bestStart, bestStart + movie.runtime});
             cursor = bestStart + movie.runtime + gapCleanup;
         }
         return events;
+    }
+
+    private static List<int[]> combineBusy(List<int[]> movieBusy, List<int[]> roomBusy) {
+        if (movieBusy == null || movieBusy.isEmpty()) {
+            return roomBusy;
+        }
+        if (roomBusy == null || roomBusy.isEmpty()) {
+            return movieBusy;
+        }
+        List<int[]> combined = new ArrayList<>(movieBusy.size() + roomBusy.size());
+        combined.addAll(movieBusy);
+        combined.addAll(roomBusy);
+        return combined;
     }
 
     static int earliestWithoutMovieConflict(int start, int runtime, List<int[]> busy) {
@@ -552,39 +624,81 @@ public class AutoGenerateService {
         return remainder == 0 ? minutes : minutes + (step - remainder);
     }
 
-    private Map<String, MovieConfig> buildMovieConfigs(List<Movie> movies, Map<String, Integer> movieVersions,
-                                                         Map<String, Integer> movieRatios) {
+    Map<String, MovieConfig> buildMovieConfigs(List<Movie> movies, Map<String, Integer> movieRatios,
+                                                         Map<String, Map<Integer, Integer>> movieFormatRatios,
+                                                         Map<String, List<Integer>> movieRoomIds,
+                                                         List<Integer> poolRoomIds) {
         Map<String, MovieConfig> configs = new LinkedHashMap<>();
-        Map<String, Integer> versions = movieVersions != null ? movieVersions : new HashMap<>();
         Map<String, Integer> ratios = movieRatios != null ? movieRatios : new HashMap<>();
+        Set<Integer> pool = poolRoomIds != null ? new LinkedHashSet<>(poolRoomIds) : Collections.emptySet();
+
         for (Movie movie : movies) {
             if (movie.getVersions() == null || movie.getVersions().isEmpty()) {
                 continue;
             }
-            Integer requestedVersionId = versions.get(movie.getMovieId());
-            Version version = movie.getVersions().stream()
-                    .filter(v -> v.getVersionId().equals(requestedVersionId))
-                    .findFirst()
-                    .orElseGet(() -> movie.getVersions().stream()
-                            .min(Comparator.comparing(Version::getVersionId))
-                            .orElse(null));
-            if (version == null) {
-                continue;
-            }
-            int ratio = ratios.getOrDefault(movie.getMovieId(), MIN_RATIO);
-            ratio = Math.min(MAX_RATIO, Math.max(MIN_RATIO, ratio));
+            int ratio = clamp(ratios.getOrDefault(movie.getMovieId(), MIN_RATIO), MIN_RATIO, MAX_RATIO);
 
-            MovieConfig config = new MovieConfig();
-            config.movieId = movie.getMovieId();
-            config.movieName = movie.getMovieNameVn();
-            config.runtime = movie.getDuration();
-            config.version = version;
-            config.ratio = ratio;
-            config.fromDate = movie.getFromDate();
-            config.toDate = movie.getToDate();
-            configs.put(movie.getMovieId(), config);
+            Set<Integer> validVersionIds = movie.getVersions().stream()
+                    .map(Version::getVersionId).collect(Collectors.toSet());
+            Map<Integer, Integer> rawFormatRatios = movieFormatRatios != null ? movieFormatRatios.get(movie.getMovieId()) : null;
+            Map<Integer, Integer> formatRatios = new LinkedHashMap<>();
+            if (rawFormatRatios != null) {
+                for (Map.Entry<Integer, Integer> e : rawFormatRatios.entrySet()) {
+                    if (validVersionIds.contains(e.getKey())) {
+                        formatRatios.put(e.getKey(), clamp(e.getValue(), MIN_FORMAT_RATIO, MAX_FORMAT_RATIO));
+                    }
+                }
+            }
+
+            List<Version> activeVersions;
+            if (formatRatios.isEmpty()) {
+                Version first = movie.getVersions().stream()
+                        .min(Comparator.comparing(Version::getVersionId)).orElse(null);
+                if (first == null) {
+                    continue;
+                }
+                formatRatios.put(first.getVersionId(), MIN_FORMAT_RATIO);
+                activeVersions = List.of(first);
+            } else {
+                activeVersions = movie.getVersions().stream()
+                        .filter(v -> formatRatios.containsKey(v.getVersionId()))
+                        .collect(Collectors.toList());
+            }
+
+            double sumRaw = activeVersions.stream().mapToInt(v -> formatRatios.get(v.getVersionId())).sum();
+
+            List<Integer> rawRoomIds = movieRoomIds != null ? movieRoomIds.get(movie.getMovieId()) : null;
+            Set<Integer> allowedRoomIds = null;
+            if (rawRoomIds != null && !rawRoomIds.isEmpty()) {
+                Set<Integer> filtered = rawRoomIds.stream()
+                        .filter(pool::contains)
+                        .collect(Collectors.toCollection(LinkedHashSet::new));
+                if (!filtered.isEmpty()) {
+                    allowedRoomIds = filtered;
+                }
+            }
+
+            for (Version version : activeVersions) {
+                double normalizedShare = formatRatios.get(version.getVersionId()) / sumRaw;
+
+                MovieConfig config = new MovieConfig();
+                config.token = movie.getMovieId() + TOKEN_SEP + version.getVersionId();
+                config.movieId = movie.getMovieId();
+                config.movieName = movie.getMovieNameVn();
+                config.runtime = movie.getDuration();
+                config.version = version;
+                config.comboWeight = ratio * normalizedShare;
+                config.allowedRoomIds = allowedRoomIds;
+                config.fromDate = movie.getFromDate();
+                config.toDate = movie.getToDate();
+                configs.put(config.token, config);
+            }
         }
         return configs;
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.min(max, Math.max(min, value));
     }
 
     private List<String> findIncompatibleMovies(Map<String, MovieConfig> movieConfigs, List<CinemaRoom> rooms) {
@@ -594,10 +708,14 @@ public class AutoGenerateService {
                 room.getFormats().forEach(f -> allRoomVersionIds.add(f.getVersionId()));
             }
         }
+        Map<String, List<MovieConfig>> byMovie = movieConfigs.values().stream()
+                .collect(Collectors.groupingBy(mc -> mc.movieId, LinkedHashMap::new, Collectors.toList()));
         List<String> warnings = new ArrayList<>();
-        for (MovieConfig mc : movieConfigs.values()) {
-            if (!allRoomVersionIds.contains(mc.version.getVersionId())) {
-                warnings.add(mc.movieName);
+        for (List<MovieConfig> entries : byMovie.values()) {
+            boolean anyCompatible = entries.stream()
+                    .anyMatch(mc -> allRoomVersionIds.contains(mc.version.getVersionId()));
+            if (!anyCompatible) {
+                warnings.add(entries.get(0).movieName);
             }
         }
         return warnings;
@@ -613,11 +731,25 @@ public class AutoGenerateService {
         return true;
     }
 
-    private List<Movie> resolveMovies(List<String> movieIds) {
+    List<Movie> resolveMovies(List<String> movieIds, LocalDate rangeStart, LocalDate rangeEnd) {
         return movieRepository.findAllById(movieIds).stream()
-                .filter(movie -> movie.getStatus() != MovieStatus.INACTIVE && movie.getStatus() != MovieStatus.DELETED)
+                .filter(movie -> movie.getStatus() != MovieStatus.UNSCHEDULED && movie.getStatus() != MovieStatus.INACTIVE)
                 .filter(movie -> movie.getDuration() != null && movie.getDuration() > 0)
+                .filter(movie -> overlapsRange(movie, rangeStart, rangeEnd))
                 .collect(Collectors.toList());
+    }
+
+    /** True unless the movie's showing window ([fromDate, toDate], either end optionally unbounded) misses the range entirely. */
+    static boolean overlapsRange(Movie movie, LocalDate rangeStart, LocalDate rangeEnd) {
+        LocalDate from = movie.getFromDate();
+        LocalDate to = movie.getToDate();
+        if (from != null && from.isAfter(rangeEnd)) {
+            return false;
+        }
+        if (to != null && to.isBefore(rangeStart)) {
+            return false;
+        }
+        return true;
     }
 
     private List<CinemaRoom> resolveRooms(List<Integer> roomIds) {
@@ -636,11 +768,11 @@ public class AutoGenerateService {
         return value != null ? value : fallback;
     }
 
-    private static class Weight {
+    static class Weight {
         final String key;
-        final int weight;
+        final double weight;
 
-        Weight(String key, int weight) {
+        Weight(String key, double weight) {
             this.key = key;
             this.weight = weight;
         }

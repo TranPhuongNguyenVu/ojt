@@ -1,16 +1,28 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { NavLink, Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Search, Bell, User, LogOut, LayoutDashboard, UserCircle, LogIn, UserPlus } from 'lucide-react';
 import CustomerService from '../services/CustomerService.js';
+import MovieService from '../services/MovieService.js';
 import ThemeToggle from './ThemeToggle.jsx';
+import { stripDiacritics } from '../utils/textNormalizeUtils.js';
+
+const SUGGESTION_LIMIT = 8;
+
+const getMovieName = (movie) => movie.movieNameVn || movie.movieNameEnglish || '';
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [keyword, setKeyword] = useState('');
+  const [allMovies, setAllMovies] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const menuRef = useRef(null);
+  const searchBoxRef = useRef(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -34,6 +46,56 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  useEffect(() => {
+    if (location.pathname === '/movies') {
+      setKeyword(searchParams.get('q') || '');
+    }
+  }, [location.pathname, searchParams]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    MovieService.getAllMovies()
+      .then((response) => {
+        if (cancelled) return;
+        // Gợi ý tìm kiếm là mặt tiền công khai: ẩn phim UNSCHEDULED/INACTIVE/ENDED
+        // kể cả khi API trả về danh sách chưa lọc.
+        const list = (response.data.data || []).filter(
+          (m) => m.status !== 'UNSCHEDULED' && m.status !== 'INACTIVE' && m.status !== 'ENDED'
+        );
+        setAllMovies(list);
+      })
+      .catch(() => {
+        if (!cancelled) setAllMovies([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const suggestions = useMemo(() => {
+    const query = stripDiacritics(keyword.trim().toLowerCase());
+    if (!query) return [];
+
+    return allMovies
+      .filter((movie) => {
+        const vn = stripDiacritics((movie.movieNameVn || '').toLowerCase());
+        const en = stripDiacritics((movie.movieNameEnglish || '').toLowerCase());
+        return vn.includes(query) || en.includes(query);
+      })
+      .sort((a, b) => getMovieName(a).localeCompare(getMovieName(b), 'vi', { sensitivity: 'base' }))
+      .slice(0, SUGGESTION_LIMIT);
+  }, [keyword, allMovies]);
+
   const userString = localStorage.getItem('USER_LOGIN');
   const user = userString ? JSON.parse(userString) : null;
   const role = user ? user.roleName : null;
@@ -51,9 +113,37 @@ const Navbar = () => {
     navigate('/login');
   };
 
+  const handleSearch = () => {
+    const trimmed = keyword.trim();
+    setShowSuggestions(false);
+    if (!trimmed) {
+      navigate('/movies');
+      return;
+    }
+    navigate(`/movies?q=${encodeURIComponent(trimmed)}&page=1`);
+  };
+
+  const handleKeywordChange = (event) => {
+    const value = event.target.value;
+    setKeyword(value);
+    setShowSuggestions(true);
+
+    // Ô rỗng thì bỏ kết quả tìm kiếm cũ ngay, không chờ submit lại
+    if (!value.trim() && location.pathname === '/movies' && searchParams.get('q')) {
+      navigate('/movies', { replace: true });
+    }
+  };
+
+  const handleSelectSuggestion = (movie) => {
+    const name = getMovieName(movie);
+    setKeyword(name);
+    setShowSuggestions(false);
+    navigate(`/detail/${movie.movieId}`);
+  };
+
   return (
     <nav
-      className={`cine-navbar w-full bg-[#F8F9FA] dark:bg-transparent border-b border-gray-200 dark:border-transparent px-6 py-3.5 flex items-center justify-between font-sans relative z-50 transition-all duration-300 ${
+      className={`cine-navbar sticky top-0 w-full bg-[#F8F9FA] dark:bg-transparent border-b border-gray-200 dark:border-transparent px-6 py-3.5 flex items-center justify-between font-sans z-50 transition-[background-color,box-shadow,border-color] duration-300 ${
         scrolled ? 'is-scrolled' : ''
       }`}
     >
@@ -91,20 +181,64 @@ const Navbar = () => {
       </div>
 
       <div className="flex items-center space-x-4 md:space-x-5">
-        <div className="relative hidden lg:block">
+        <div className="relative hidden lg:block" ref={searchBoxRef}>
           <input
             type="text"
-            placeholder="Search movies..."
-            onFocus={() => setSearchFocused(true)}
+            value={keyword}
+            onChange={handleKeywordChange}
+            onFocus={() => {
+              setSearchFocused(true);
+              setShowSuggestions(true);
+            }}
             onBlur={() => setSearchFocused(false)}
-            className={`cine-search w-56 dark:w-52 bg-[#F0F2F5] dark:bg-white/5 text-xs text-gray-600 dark:text-white/90 pl-4 pr-10 py-2.5 rounded-full border border-transparent dark:border-white/10 focus:outline-none focus:bg-white dark:focus:bg-[#10131A]/90 focus:border-gray-300 dark:focus:border-[#4CC9F0]/50 transition-all placeholder-gray-400 dark:placeholder-white/35 ${
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSearch();
+              if (e.key === 'Escape') setShowSuggestions(false);
+            }}
+            maxLength={100}
+            placeholder="Nhập tên phim..."
+            aria-label="Tìm kiếm phim"
+            aria-autocomplete="list"
+            aria-expanded={showSuggestions && keyword.trim().length > 0}
+            className={`cine-search w-56 bg-[#F0F2F5] dark:bg-white/5 text-xs text-gray-600 dark:text-white/90 pl-4 pr-10 py-2.5 rounded-full border border-transparent dark:border-white/10 focus:outline-none focus:bg-white dark:focus:bg-[#10131A]/90 focus:border-gray-300 dark:focus:border-[#4CC9F0]/50 transition-[background-color,border-color,box-shadow] duration-200 placeholder-gray-400 dark:placeholder-white/35 ${
               searchFocused ? 'dark:shadow-[0_0_0_3px_rgba(76,201,240,0.15)]' : ''
             }`}
           />
-          <Search
-            size={16}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-white/45 cursor-pointer hover:text-gray-600 dark:hover:text-[#4CC9F0] transition-colors"
-          />
+          <button
+            type="button"
+            onClick={handleSearch}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-white/45 hover:text-gray-600 dark:hover:text-[#4CC9F0] transition-colors"
+            aria-label="Tìm kiếm"
+          >
+            <Search size={16} />
+          </button>
+          {showSuggestions && keyword.trim() && (
+            <ul className="absolute right-0 top-full mt-2 z-50 w-72 bg-white dark:bg-[#10131A]/95 dark:backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-xl shadow-lg max-h-72 overflow-y-auto">
+              {suggestions.length > 0 ? (
+                suggestions.map((movie) => (
+                  <li key={movie.movieId}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleSelectSuggestion(movie)}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-800 dark:text-white/90 hover:bg-gray-50 dark:hover:bg-white/8 transition-colors"
+                    >
+                      <span className="font-semibold">{getMovieName(movie)}</span>
+                      {movie.movieNameVn &&
+                        movie.movieNameEnglish &&
+                        movie.movieNameVn !== movie.movieNameEnglish && (
+                          <span className="block text-xs text-gray-400 dark:text-white/40 mt-0.5">
+                            {movie.movieNameEnglish}
+                          </span>
+                        )}
+                    </button>
+                  </li>
+                ))
+              ) : (
+                <li className="px-4 py-3 text-sm text-gray-500 dark:text-white/50">Không tìm thấy phim</li>
+              )}
+            </ul>
+          )}
         </div>
 
         <ThemeToggle />

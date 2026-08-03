@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Edit, Search, Plus, Film, Trash2, RotateCcw, Filter, ChevronDown, X } from "lucide-react";
+import { Edit, Search, Plus, Film, Ban, RotateCcw, Filter, ChevronDown, X } from "lucide-react";
 import Pagination from "../../../components/Pagination";
 import MovieService from "../../../services/MovieService";
 import AddMovieModal from "./add/AddMovieModal";
@@ -165,13 +165,13 @@ const MovieManagement = () => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [currentPage, totalPages]);
 
-  const handleDeleteMovie = async (movie) => {
+  const handleDeactivateMovie = async (movie) => {
     setActionError({ id: null, msg: "" });
     try {
       await MovieService.deleteMovie(movie.movieId);
       handleRefresh();
     } catch (error) {
-      const msg = mapMovieApiError(error, "Không thể xóa phim.");
+      const msg = mapMovieApiError(error, "Không thể ngừng hoạt động phim.");
       setActionError({ id: movie.movieId, msg });
     }
   };
@@ -188,23 +188,23 @@ const MovieManagement = () => {
   };
 
   const thClass =
-    "px-4 py-3 text-xs text-gray-500 font-bold overflow-hidden";
-  const tdClass = "px-4 py-3 text-sm text-gray-600 overflow-hidden";
+    "px-4 py-3 text-xs text-gray-500 dark:text-gray-400 font-bold overflow-hidden";
+  const tdClass = "px-4 py-3 text-sm text-gray-600 dark:text-gray-300 overflow-hidden";
 
   const statusOptions = [
     { value: "ALL", label: MOVIE_LABELS.filterAll },
     { value: "UPCOMING", label: MOVIE_LABELS.statusUpcoming },
     { value: "SHOWING", label: MOVIE_LABELS.statusShowing },
     { value: "ENDED", label: MOVIE_LABELS.statusEnded },
+    { value: "UNSCHEDULED", label: MOVIE_LABELS.statusUnscheduled },
     { value: "INACTIVE", label: MOVIE_LABELS.statusInactive },
-    { value: "DELETED", label: MOVIE_LABELS.statusDeleted },
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gray-50 font-sans -m-8 md:-m-10">
+    <div className="flex-1 flex flex-col h-full bg-gray-50 dark:bg-gray-950 font-sans -m-8 md:-m-10 transition-colors duration-300">
       {/* Header */}
-      <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 shrink-0 gap-4">
-        <h2 className="text-xl font-bold text-gray-800 shrink-0">Quản lý phim</h2>
+      <header className="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-8 shrink-0 gap-4">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white shrink-0">Quản lý phim</h2>
         <div className="flex items-center gap-3 flex-wrap">
           {/* Search */}
           <div className="relative">
@@ -214,9 +214,9 @@ const MovieManagement = () => {
               onChange={handleSearchChange}
               maxLength={100}
               placeholder="Tìm kiếm phim..."
-              className="bg-gray-100 text-sm rounded-full pl-10 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-gray-300 w-48"
+              className="bg-gray-100 dark:bg-gray-800/60 dark:text-white text-sm rounded-full pl-10 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600 w-48"
             />
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           </div>
 
           {/* Add button */}
@@ -234,20 +234,20 @@ const MovieManagement = () => {
       {/* Main */}
       <main className="flex-1 overflow-y-auto p-8">
         {errorMessage && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-4 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300">
             {errorMessage}
           </div>
         )}
 
-        <div className="mb-4 bg-white rounded-xl shadow-sm border border-gray-200 px-5 py-4 flex flex-wrap items-center gap-6">
-          <Filter size={18} className="text-gray-400 shrink-0" />
+        <div className="mb-4 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 px-5 py-4 flex flex-wrap items-center gap-6">
+          <Filter size={18} className="text-gray-400 dark:text-gray-500 shrink-0" />
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-gray-500 uppercase">{MOVIE_LABELS.filterStatus}</span>
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">{MOVIE_LABELS.filterStatus}</span>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-gray-100 border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-gray-300"
+              className="bg-gray-100 dark:bg-gray-800/60 dark:text-white border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600"
             >
               {statusOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -256,12 +256,12 @@ const MovieManagement = () => {
           </div>
 
           <div className="flex items-center gap-2" ref={formatDropdownRef}>
-            <span className="text-xs font-bold text-gray-500 uppercase">{MOVIE_LABELS.filterFormat}</span>
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">{MOVIE_LABELS.filterFormat}</span>
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setIsFormatDropdownOpen((prev) => !prev)}
-                className="flex items-center gap-2 bg-gray-100 border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-gray-300 min-w-[90px] justify-between"
+                className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800/60 dark:text-white border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600 min-w-[90px] justify-between"
               >
                 <span className="truncate max-w-[140px]">
                   {formatFilterIds.length === 0
@@ -271,17 +271,17 @@ const MovieManagement = () => {
                         .map((v) => v.versionName)
                         .join(", ")}
                 </span>
-                <ChevronDown size={14} className="text-gray-400 shrink-0" />
+                <ChevronDown size={14} className="text-gray-400 dark:text-gray-500 shrink-0" />
               </button>
 
               {isFormatDropdownOpen && (
-                <div className="absolute z-10 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                <div className="absolute z-10 mt-1 w-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg py-1">
                   {versionOptions.map((option) => {
                     const isChecked = formatFilterIds.includes(option.versionId);
                     return (
                       <label
                         key={option.versionId}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                       >
                         <input
                           type="checkbox"
@@ -299,12 +299,12 @@ const MovieManagement = () => {
           </div>
 
           <div className="flex items-center gap-2" ref={genreDropdownRef}>
-            <span className="text-xs font-bold text-gray-500 uppercase">{MOVIE_LABELS.filterGenre}</span>
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">{MOVIE_LABELS.filterGenre}</span>
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setIsGenreDropdownOpen((prev) => !prev)}
-                className="flex items-center gap-2 bg-gray-100 border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-gray-300 min-w-[90px] justify-between"
+                className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800/60 dark:text-white border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600 min-w-[90px] justify-between"
               >
                 <span className="truncate max-w-[140px]">
                   {genreFilterIds.length === 0
@@ -314,17 +314,17 @@ const MovieManagement = () => {
                         .map((t) => t.typeName)
                         .join(", ")}
                 </span>
-                <ChevronDown size={14} className="text-gray-400 shrink-0" />
+                <ChevronDown size={14} className="text-gray-400 dark:text-gray-500 shrink-0" />
               </button>
 
               {isGenreDropdownOpen && (
-                <div className="absolute z-10 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                <div className="absolute z-10 mt-1 w-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg py-1">
                   {typeOptions.map((option) => {
                     const isChecked = genreFilterIds.includes(option.typeId);
                     return (
                       <label
                         key={option.typeId}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                       >
                         <input
                           type="checkbox"
@@ -345,7 +345,7 @@ const MovieManagement = () => {
             <button
               type="button"
               onClick={clearFilters}
-              className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-[#C00000] transition-colors cursor-pointer"
+              className="flex items-center gap-1 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-[#C00000] transition-colors cursor-pointer"
             >
               <X size={14} />
               {MOVIE_LABELS.clearFilters}
@@ -353,18 +353,7 @@ const MovieManagement = () => {
           )}
         </div>
 
-        <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {!isLoading && filtered.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filtered.length}
-              pageSize={PAGE_SIZE}
-              onPageChange={setCurrentPage}
-              itemLabel="phim"
-            />
-          )}
-
+        <div className="w-full bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1340px] table-fixed text-left border-collapse">
               <colgroup>
@@ -379,7 +368,7 @@ const MovieManagement = () => {
                 <col className="w-28" />
               </colgroup>
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
+                <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">
                   <th className={thClass}>Poster</th>
                   <th className={thClass}>Tên phim</th>
                   <th className={`${thClass} whitespace-nowrap`}>{MOVIE_LABELS.columnDuration}</th>
@@ -391,10 +380,10 @@ const MovieManagement = () => {
                   <th className={`${thClass} text-center`}>Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {isLoading ? (
                   <tr>
-                    <td colSpan="9" className="px-4 py-16 text-center text-gray-500">
+                    <td colSpan="9" className="px-4 py-16 text-center text-gray-500 dark:text-gray-400">
                       Đang tải dữ liệu...
                     </td>
                   </tr>
@@ -410,16 +399,16 @@ const MovieManagement = () => {
                 ) : (
                   paginated.map((movie) => {
                     const statusBadge = getStatusBadge(movie.status);
-                    const isDeleted = movie.status === "DELETED";
+                    const isInactive = movie.status === "INACTIVE";
                     const types = movie.types || [];
                     const versions = movie.versions || [];
                     const visibleTypes = types.slice(0, 2);
                     const visibleVersions = versions.slice(0, 3);
                     return (
-                      <tr key={movie.movieId} className="hover:bg-gray-50 transition-colors">
+                      <tr key={movie.movieId} className="hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors">
                         {/* Poster */}
                         <td className={tdClass}>
-                          <div className="w-10 h-14 rounded overflow-hidden bg-gray-100 shrink-0">
+                          <div className="w-10 h-14 rounded overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0">
                             {movie.smallImage ? (
                               <img
                                 src={movie.smallImage}
@@ -427,7 +416,7 @@ const MovieManagement = () => {
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-300">
+                              <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-600">
                                 <Film size={18} />
                               </div>
                             )}
@@ -436,10 +425,10 @@ const MovieManagement = () => {
 
                         {/* Tên */}
                         <td className={tdClass}>
-                          <p className="font-semibold text-gray-900 truncate" title={movie.movieNameVn}>
+                          <p className="font-semibold text-gray-900 dark:text-white truncate" title={movie.movieNameVn}>
                             {movie.movieNameVn}
                           </p>
-                          <p className="text-xs text-gray-400 truncate" title={movie.movieNameEnglish}>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 truncate" title={movie.movieNameEnglish}>
                             {movie.movieNameEnglish}
                           </p>
                         </td>
@@ -462,13 +451,13 @@ const MovieManagement = () => {
                               {visibleTypes.map((t) => (
                                 <span
                                   key={t.typeId}
-                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-red-50 text-[#C00000] font-medium whitespace-nowrap"
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-red-50 dark:bg-red-950/40 text-[#C00000] dark:text-red-300 font-medium whitespace-nowrap"
                                 >
                                   {t.typeName}
                                 </span>
                               ))}
                               {types.length > visibleTypes.length && (
-                                <span className="text-xs text-gray-400 whitespace-nowrap">
+                                <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
                                   +{types.length - visibleTypes.length}
                                 </span>
                               )}
@@ -487,13 +476,13 @@ const MovieManagement = () => {
                               {visibleVersions.map((v) => (
                                 <span
                                   key={v.versionId}
-                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 font-medium whitespace-nowrap"
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-medium whitespace-nowrap"
                                 >
                                   {v.versionName}
                                 </span>
                               ))}
                               {versions.length > visibleVersions.length && (
-                                <span className="text-xs text-gray-400 whitespace-nowrap">
+                                <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
                                   +{versions.length - visibleVersions.length}
                                 </span>
                               )}
@@ -514,22 +503,22 @@ const MovieManagement = () => {
                         <td className={tdClass}>
                           <div className="flex flex-col items-center gap-1">
                             <div className="flex items-center gap-1">
-                              {!isDeleted && (
+                              {!isInactive && (
                                 <button
                                   type="button"
                                   onClick={() => setEditingMovie(movie)}
-                                  className="text-blue-500 hover:text-blue-700 p-1.5 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+                                  className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 p-1.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-md transition-colors"
                                   title="Chỉnh sửa"
                                 >
                                   <Edit size={15} />
                                 </button>
                               )}
 
-                              {isDeleted ? (
+                              {isInactive ? (
                                 <button
                                   type="button"
                                   onClick={() => handleRestoreMovie(movie)}
-                                  className="text-green-500 hover:text-green-700 p-1.5 bg-green-50 hover:bg-green-100 rounded-md transition-colors"
+                                  className="text-green-500 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 p-1.5 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-md transition-colors"
                                   title="Khôi phục"
                                 >
                                   <RotateCcw size={15} />
@@ -537,18 +526,18 @@ const MovieManagement = () => {
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteMovie(movie)}
-                                  className="text-red-500 hover:text-red-700 p-1.5 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
-                                  title="Xóa"
+                                  onClick={() => handleDeactivateMovie(movie)}
+                                  className="text-red-500 hover:text-red-700 p-1.5 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 rounded-md transition-colors"
+                                  title="Ngừng hoạt động"
                                 >
-                                  <Trash2 size={15} />
+                                  <Ban size={15} />
                                 </button>
                               )}
                             </div>
 
                             {/* Inline action error for this row */}
                             {actionError.id === movie.movieId && (
-                              <p className="text-xs text-red-500 text-center max-w-[120px] leading-tight">
+                              <p className="text-xs text-red-500 dark:text-red-400 text-center max-w-[120px] leading-tight">
                                 {actionError.msg}
                               </p>
                             )}

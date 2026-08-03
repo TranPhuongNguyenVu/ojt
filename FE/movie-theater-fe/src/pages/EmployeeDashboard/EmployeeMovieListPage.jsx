@@ -6,7 +6,7 @@ import ScheduleService from "../../services/ScheduleService";
 import MoviePoster from "../../components/MoviePoster";
 
 const PAGE_SIZE = 12;
-const INACTIVE_STATUSES = new Set(["DELETED", "INACTIVE", "ENDED"]);
+const INACTIVE_STATUSES = new Set(["INACTIVE", "UNSCHEDULED", "ENDED"]);
 const ACTIVE_SCHEDULE_STATUSES = new Set(["SCHEDULED", "SOLD_OUT"]);
 
 const getLocalDate = () => {

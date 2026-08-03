@@ -346,19 +346,22 @@ const ProfilePage = () => {
             </div>
 
             {/* Đổi Mật Khẩu tích hợp */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-colors duration-300">
+            <div className="bg-white dark:bg-[#10131A]/90 rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-colors duration-300">
               <div className="space-y-1">
-                <h3 className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase tracking-tight flex items-center gap-2">
-                  <Lock size={16} className="text-[#C00000]" />
+                <h3 className="text-sm font-black text-[#111827] dark:text-white uppercase tracking-tight flex items-center gap-2">
+                  <Lock size={16} className="text-[#C00000] dark:text-[#ff4d57]" />
                   Mật khẩu đăng nhập
                 </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Bảo vệ tài khoản bằng mật khẩu có tính bảo mật cao</p>
+                <p className="text-xs text-[#6B7280] dark:text-white/50 font-medium">
+                  Bảo vệ tài khoản bằng mật khẩu có tính bảo mật cao
+                </p>
               </div>
               <button
+                type="button"
                 onClick={() => setActiveTab('change-password')}
-                className="bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-white text-white dark:text-gray-900 text-xs font-black px-6 py-2.5 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer"
+                className="bg-[#111827] dark:bg-white dark:text-[#111827] hover:bg-black dark:hover:bg-white/90 text-white text-xs font-black px-6 py-2.5 rounded-xl transition-all uppercase tracking-wider cursor-pointer"
               >
-                ĐỔI MẬT KHẨU
+                Đổi mật khẩu
               </button>
             </div>
 
@@ -369,24 +372,28 @@ const ProfilePage = () => {
       
       case 'booked-tickets':
         return (
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 space-y-6 transition-colors duration-300">
+          <div className="bg-white dark:bg-[#10131A]/90 rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-6 space-y-6 transition-colors duration-300">
             <MyTicketsSection tab="booked" />
           </div>
         );
 
       case 'canceled-tickets':
         return (
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 space-y-6 transition-colors duration-300">
+          <div className="bg-white dark:bg-[#10131A]/90 rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-6 space-y-6 transition-colors duration-300">
             <MyTicketsSection tab="canceled" />
           </div>
         );
 
       case 'points-history':
         return (
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 space-y-6 transition-colors duration-300">
+          <div className="bg-white dark:bg-[#10131A]/90 rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-6 space-y-6 transition-colors duration-300">
             <div className="space-y-1">
-              <h3 className="text-base font-black text-gray-900 dark:text-white tracking-tight uppercase">Lịch sử tích/dùng điểm</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Theo dõi lịch sử tích lũy và sử dụng điểm thưởng của bạn.</p>
+              <h3 className="text-base font-black text-[#111827] dark:text-white tracking-tight uppercase">
+                Lịch sử tích/dùng điểm
+              </h3>
+              <p className="text-xs text-[#6B7280] dark:text-white/50 font-medium">
+                Theo dõi lịch sử tích lũy và sử dụng điểm thưởng của bạn.
+              </p>
             </div>
 
             {/* Bộ lọc điểm */}
@@ -504,14 +511,14 @@ const ProfilePage = () => {
 
       case 'change-password':
         return (
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 max-w-lg mx-auto flex flex-col space-y-6 transition-colors duration-300">
-            <div className="flex items-center space-x-3 pb-2 border-b border-gray-100 dark:border-gray-800">
-              <div className="w-9 h-9 bg-red-50 text-[#C00000] rounded-xl flex items-center justify-center">
+          <div className="bg-white dark:bg-[#10131A]/90 rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-6 max-w-lg mx-auto flex flex-col space-y-6 transition-colors duration-300">
+            <div className="flex items-center space-x-3 pb-2 border-b border-gray-100 dark:border-white/10">
+              <div className="w-9 h-9 bg-red-50 dark:bg-red-500/15 text-[#C00000] dark:text-[#ff4d57] rounded-xl flex items-center justify-center">
                 <Lock size={18} />
               </div>
               <div>
-                <h3 className="text-base font-black text-gray-900 dark:text-white leading-tight">Đổi mật khẩu</h3>
-                <p className="text-[11px] text-gray-400 font-medium">Bảo vệ tài khoản bằng mật khẩu có tính bảo mật cao</p>
+                <h3 className="text-base font-black text-[#111827] dark:text-white leading-tight">Đổi mật khẩu</h3>
+                <p className="text-[11px] text-[#9CA3AF] dark:text-white/40 font-medium">Bảo vệ tài khoản bằng mật khẩu có tính bảo mật cao</p>
               </div>
             </div>
 
@@ -643,18 +650,22 @@ const ProfilePage = () => {
 
   return (
     <div className="w-full min-h-screen bg-gray-50/50 dark:bg-transparent py-10 px-4 md:px-8 lg:px-16 font-sans transition-colors duration-300">
+      <div className="max-w-7xl mx-auto mb-6">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#C00000] dark:text-[#ff4d57]">
+          Tài khoản
+        </p>
+        <h1 className="mt-1 text-2xl sm:text-3xl font-black text-[#111827] dark:text-white tracking-tight">
+          Hồ sơ của tôi
+        </h1>
+      </div>
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-6">
-        
-        {/* Sidebar điều hướng trái */}
         <div className="flex-shrink-0">
-          <ProfileSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+          <ProfileSidebar activeTab={activeTab} setActiveTab={setActiveTab} memberData={memberData} />
         </div>
 
-        {/* Nội dung bên phải */}
         <div className="flex-1 min-w-0">
           {renderTabContent()}
         </div>
-
       </div>
 
       {/* Modal Chỉnh sửa hồ sơ */}

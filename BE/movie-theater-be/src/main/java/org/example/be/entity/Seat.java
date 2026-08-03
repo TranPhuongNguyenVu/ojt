@@ -2,6 +2,7 @@ package org.example.be.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.example.be.enums.SeatStatus;
 
 @Entity
 @Table(name = "SEAT")
@@ -11,10 +12,6 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class Seat {
-
-    public static final String STATUS_ACTIVE = "ACTIVE";
-    public static final String STATUS_INACTIVE = "INACTIVE";
-    public static final String STATUS_AISLE = "AISLE";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,7 +34,8 @@ public class Seat {
     @Column(name = "PAIR_SEAT_ID")
     private Integer pairSeatId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "STATUS", length = 20)
     @Builder.Default
-    private String status = STATUS_ACTIVE;
+    private SeatStatus status = SeatStatus.ACTIVE;
 }

@@ -24,6 +24,19 @@ export const compareSchedulesByStatusThenStartTime = (a, b) => {
 };
 
 /**
+ * Shared color set for Schedule.displayStatus (SCHEDULED/SHOWING/ENDED/CANCELLED/DELETED),
+ * reused by the Timeline block fill, the Detail modal badge, and the Table view badge —
+ * a single source of truth so the 3 surfaces never drift into different colors.
+ */
+export const DISPLAY_STATUS_META = {
+  SCHEDULED: { labelKey: "statusScheduled", dotVar: "var(--cine-status-scheduled)", badgeClass: "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300" },
+  SHOWING: { labelKey: "statusShowing", dotVar: "var(--cine-status-showing)", badgeClass: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300" },
+  ENDED: { labelKey: "statusEnded", dotVar: "var(--cine-status-ended)", badgeClass: "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400" },
+  CANCELLED: { labelKey: "statusCancelled", dotVar: "#f59e0b", badgeClass: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300" },
+  DELETED: { labelKey: "statusDeleted", dotVar: "#ef4444", badgeClass: "bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400" },
+};
+
+/**
  * Generate time slot options (HH:MM strings) from EARLIEST_SCHEDULE_HOUR to
  * LATEST_SCHEDULE_HOUR with stepMinutes interval (default 30).
  */
@@ -43,16 +56,16 @@ export const generateTimeSlots = (stepMinutes = 30) => {
 };
 
 export const fieldInputClass =
-  "block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm";
+  "block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm";
 
 export const fieldInputIconClass =
-  "block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm";
+  "block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm";
 
 export const fieldSelectClass =
-  "block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white";
+  "block w-full rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white dark:bg-gray-800/60 dark:text-white";
 
 export const fieldLabelClass =
-  "block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1";
+  "block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1";
 
 export const getApiErrorMessage = (error, fallback) =>
   error?.response?.data?.message || error?.message || fallback;

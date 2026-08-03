@@ -16,6 +16,9 @@
   --cine-purple: #7b61ff;
   --cine-cyan: #00e5ff;
   --cine-gold: #f7b731;
+  --cine-status-scheduled: #3467e0;
+  --cine-status-showing: #10b981;
+  --cine-status-ended: #6b7280;
   --font-display: "Outfit", "Manrope", system-ui, sans-serif;
   --font-body: "Manrope", system-ui, sans-serif;
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -44,6 +47,9 @@ html.dark {
   --cine-border: rgba(255, 255, 255, 0.08);
   --cine-text: #f5f7fb;
   --cine-muted: #9aa3b5;
+  --cine-status-scheduled: #3467e0;
+  --cine-status-showing: #34d399;
+  --cine-status-ended: #4b5563;
 
   background-color: #050505;
   color-scheme: dark;
@@ -60,29 +66,6 @@ body {
 html.dark body {
   background: #050505;
   position: relative;
-}
-
-/* Native <select> dropdown: avoid white-on-white when select has dark:text-white */
-select option {
-  background-color: #ffffff;
-  color: #111827;
-}
-
-html.dark select option {
-  background-color: #10131a;
-  color: #f5f7fb;
-}
-
-/* Apple-style custom select open animation */
-@keyframes appleMenuIn {
-  from {
-    opacity: 0;
-    transform: translateY(-6px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 /* ============ Cinematic atmosphere (dark only) ============ */
@@ -167,8 +150,6 @@ html.dark .cine-atmosphere > .cine-blob-c {
 
 /* ============ Typography ============ */
 .font-display,
-html.dark h1,
-html.dark h2,
 html.dark .cine-display {
   font-family: var(--font-display);
   letter-spacing: -0.02em;
@@ -453,17 +434,14 @@ html.dark .cine-navbar.is-scrolled {
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
 }
 
-html.dark .cine-nav-underline {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  width: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #e50914, #ff4d57);
-  box-shadow: 0 0 12px rgba(229, 9, 20, 0.7);
+.cine-nav-underline {
   transform-origin: left center;
   animation: cine-underline-in 320ms var(--ease-out-expo);
+}
+
+html.dark .cine-nav-underline {
+  background: linear-gradient(90deg, #e50914, #ff4d57);
+  box-shadow: 0 0 12px rgba(229, 9, 20, 0.7);
 }
 
 @keyframes cine-underline-in {
@@ -552,17 +530,15 @@ html.dark .cine-skeleton::after {
   }
 }
 
-/* ============ Search expand ============ */
+/* ============ Search focus ============ */
 html.dark .cine-search {
   transition:
-    width 320ms var(--ease-out-expo),
     box-shadow 280ms ease,
     border-color 280ms ease,
     background 280ms ease;
 }
 
 html.dark .cine-search:focus {
-  width: 17rem;
   background: rgba(16, 19, 26, 0.9);
   border-color: rgba(76, 201, 240, 0.45);
   box-shadow:
@@ -571,24 +547,38 @@ html.dark .cine-search:focus {
 }
 
 /* ============ Scrollbar ============ */
-html.dark {
+html {
   scrollbar-width: thin;
-  scrollbar-color: rgba(229, 9, 20, 0.55) transparent;
+  scrollbar-color: rgba(192, 0, 0, 0.45) transparent;
 }
 
-html.dark ::-webkit-scrollbar {
+::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-html.dark ::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #c00000, #7b61ff);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #e50914, #4cc9f0);
+  background-clip: padding-box;
+}
+
+html.dark {
+  scrollbar-color: rgba(229, 9, 20, 0.55) transparent;
 }
 
 html.dark ::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #e50914, #7b61ff);
-  border-radius: 999px;
-  border: 2px solid transparent;
   background-clip: padding-box;
 }
 
@@ -633,6 +623,21 @@ html.dark .rounded-3xl.bg-white {
   box-shadow:
     0 16px 40px rgba(0, 0, 0, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Ticket/invoice modal: keep a solid opaque panel in dark mode — the glass
+   blur above makes dense text (ticket code, invoice line items) look soft
+   compared to the crisp solid-white panel in light mode. */
+html.dark .ticket-invoice-modal.rounded-3xl.bg-white {
+  background: #10131a !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* html5-qrcode renders its status icons as black-filled <img> data-URIs —
+   invert them to white so they stay visible on the dark scanner card. */
+html.dark .checkin-dark-surface #employee-ticket-qr-reader img {
+  filter: invert(1);
 }
 
 /* Booking flow: keep deep cinematic palette, add soft layered gradients */
@@ -704,8 +709,7 @@ html.dark .cine-booking-canvas .rounded-3xl.bg-white {
   html.dark .cine-atmosphere > .cine-blob,
   html.dark .cine-pulse,
   html.dark .hero-particles span,
-  html.dark .cine-skeleton::after,
-  .employee-glow {
+  html.dark .cine-skeleton::after {
     animation: none !important;
   }
 }
@@ -785,6 +789,58 @@ html.dark .employee-glow {
   display: none;
 }
 
+/* ============ QR check-in scanner (html5-qrcode) restyle ============
+   The library injects its own unstyled DOM (buttons, select, drag-drop box).
+   Re-skin it here to match the app instead of leaving the browser-default look. */
+#employee-ticket-qr-reader {
+  border: none !important;
+}
+
+#employee-ticket-qr-reader img[alt="Info icon"] {
+  display: none !important;
+}
+
+#employee-ticket-qr-reader .html5-qrcode-element {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: none;
+  background: #111827;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+#employee-ticket-qr-reader .html5-qrcode-element:hover {
+  background: #1f2937;
+}
+
+#employee-ticket-qr-reader select.html5-qrcode-element {
+  background: #f9fafb;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+}
+
+#employee-ticket-qr-reader #html5-qrcode-anchor-scan-type-change {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 6px 0;
+  background: none;
+  color: #6b7280;
+  text-decoration: underline;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 700;
+}
+
+#employee-ticket-qr-reader video {
+  border-radius: 12px;
+}
+
 @media print {
   @page {
     size: A4;
@@ -825,4 +881,10 @@ html.dark .employee-glow {
   section {
     break-inside: avoid;
   }
+}
+/* Native date/time pickers need a visible icon on the white admin form. */
+.datetime-control::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(45%) sepia(8%) saturate(460%) hue-rotate(170deg) brightness(88%);
+  opacity: 1;
 }

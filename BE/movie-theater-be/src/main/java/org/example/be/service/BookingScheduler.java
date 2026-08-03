@@ -17,6 +17,7 @@ public class BookingScheduler {
 
     private final InvoiceRepository invoiceRepository;
     private final BookingService bookingService;
+    private final TicketService ticketService;
 
     // Quét mỗi phút: hóa đơn PENDING quá 3 phút + ghế DRAFT quá hạn
     @Scheduled(fixedRate = 60000)
@@ -41,6 +42,15 @@ public class BookingScheduler {
             bookingService.releaseExpiredDraftSeats();
         } catch (Exception e) {
             log.error("Lỗi giải phóng ghế DRAFT hết hạn", e);
+        }
+    }
+
+    // Chạy mỗi 1 phút để đánh dấu EXPIRED các vé còn BOOKED nhưng suất chiếu đã kết thúc (khách không đến soát vé, không hoàn tiền)
+    @Scheduled(fixedRate = 60000)
+    public void expireTicketsForEndedShowtimes() {
+        int expiredCount = ticketService.expireEndedShowtimeTickets();
+        if (expiredCount > 0) {
+            log.info("Đã đánh dấu EXPIRED {} vé do suất chiếu đã kết thúc mà chưa soát vé.", expiredCount);
         }
     }
 }

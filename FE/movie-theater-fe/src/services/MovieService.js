@@ -9,6 +9,10 @@ const MovieService = {
   getMovieById: (id) => {
     return AuthService.get(`movies/${id}`);
   },
+  // Phim khả dụng để tạo suất chiếu (đã loại INACTIVE/DELETED ở BE)
+  getSchedulableMovies: () => {
+    return AuthService.get("movies/schedulable");
+  },
   // Thêm phim mới (Admin)
   createMovie: (data) => AuthService.post("movies", data),
   // Sửa phim (Admin)

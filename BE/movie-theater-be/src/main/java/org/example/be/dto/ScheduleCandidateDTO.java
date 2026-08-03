@@ -23,6 +23,8 @@ public class ScheduleCandidateDTO {
     private boolean goldenHour;
     /** Extra price of the matched golden-hour rule; null when goldenHour is false. */
     private BigDecimal goldenHourExtra;
+    /** True when this candidate was inserted into a room-day that already had another schedule. */
+    private boolean insertedIntoBusyDay;
     private boolean accepted;
     private String rejectReason;
 }

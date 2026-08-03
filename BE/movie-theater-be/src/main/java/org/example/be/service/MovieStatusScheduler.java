@@ -42,7 +42,7 @@ public class MovieStatusScheduler {
 
     @Transactional
     public void syncMovieStatuses() {
-        List<Movie> candidates = movieRepository.findByStatusIsNullOrStatusNot(MovieStatus.DELETED);
+        List<Movie> candidates = movieRepository.findByStatusIsNullOrStatusNot(MovieStatus.INACTIVE);
         List<Movie> changed = candidates.stream()
                 .filter(movie -> {
                     MovieStatus resolved = movieStatusResolver.resolve(movie);

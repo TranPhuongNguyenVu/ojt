@@ -70,6 +70,7 @@ public class ScheduleService {
                 .versionId(schedule.getVersionId())
                 .movieFormat(movieFormat)
                 .status(schedule.getStatus() != null ? schedule.getStatus().name() : null)
+                .displayStatus(computeDisplayStatus(schedule))
                 .goldenHourStart(goldenRule != null ? goldenRule.getStartTime() : null)
                 .goldenHourEnd(goldenRule != null ? goldenRule.getEndTime() : null)
                 .goldenHourExtra(goldenRule != null ? goldenRule.getExtraPrice() : null)
@@ -136,7 +137,7 @@ public class ScheduleService {
         if (room.getStatus() != CinemaRoomStatus.ACTIVE) {
             throw new IllegalStateException("Cannot schedule in an inactive room.");
         }
-        if (movie.getStatus() == MovieStatus.INACTIVE || movie.getStatus() == MovieStatus.DELETED) {
+        if (movie.getStatus() == MovieStatus.UNSCHEDULED || movie.getStatus() == MovieStatus.INACTIVE) {
             throw new IllegalStateException("Cannot schedule an inactive movie.");
         }
         if (movie.getToDate() != null &&
@@ -179,6 +180,17 @@ public class ScheduleService {
         Schedule schedule = scheduleRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Schedule not found"));
 
+        if (schedule.getStatus() == ScheduleStatus.DELETED) {
+            throw new IllegalStateException("Suất chiếu đã được xóa, không thể chỉnh sửa.");
+        }
+        if (schedule.getStatus() == ScheduleStatus.CANCELLED) {
+            throw new IllegalStateException("Suất chiếu đã bị hủy, không thể chỉnh sửa.");
+        }
+        if (!canCancelOrDelete(schedule)) {
+            throw new IllegalStateException(
+                    "Không thể chỉnh sửa: suất chiếu bắt đầu trong vòng " + MIN_CANCEL_LEAD_DAYS + " ngày tới chưa thể chỉnh sửa.");
+        }
+
         Movie movie = movieRepository.findById(request.getMovieId())
                 .orElseThrow(() -> new EntityNotFoundException("Movie not found"));
         CinemaRoom room = cinemaRoomRepository.findById(request.getCinemaRoomId())
@@ -186,7 +198,7 @@ public class ScheduleService {
         if (room.getStatus() != CinemaRoomStatus.ACTIVE) {
             throw new IllegalStateException("Cannot schedule in an inactive room.");
         }
-        if (movie.getStatus() == MovieStatus.INACTIVE || movie.getStatus() == MovieStatus.DELETED) {
+        if (movie.getStatus() == MovieStatus.UNSCHEDULED || movie.getStatus() == MovieStatus.INACTIVE) {
             throw new IllegalStateException("Cannot schedule an inactive movie.");
         }
         if (movie.getToDate() != null &&
@@ -286,6 +298,28 @@ public class ScheduleService {
                 throw new IllegalStateException("Movie already has an overlapping showtime in another room.");
             }
         }
+    }
+
+    /**
+     * Runtime-only status shown to the UI: CANCELLED/DELETED pass through unchanged; otherwise
+     * derived from now vs startTime/endTime (SHOWING/ENDED/SCHEDULED). Never persisted, never
+     * overrides {@link Schedule#getStatus()}.
+     */
+    private String computeDisplayStatus(Schedule schedule) {
+        ScheduleStatus status = schedule.getStatus();
+        if (status == ScheduleStatus.CANCELLED || status == ScheduleStatus.DELETED) {
+            return status.name();
+        }
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startTime = schedule.getStartTime();
+        LocalDateTime endTime = schedule.getEndTime();
+        if (endTime != null && now.isAfter(endTime)) {
+            return "ENDED";
+        }
+        if (startTime != null && endTime != null && !now.isBefore(startTime) && !now.isAfter(endTime)) {
+            return "SHOWING";
+        }
+        return ScheduleStatus.SCHEDULED.name();
     }
 
     private void validateRoomSupportsFormat(CinemaRoom room, Integer versionId) {

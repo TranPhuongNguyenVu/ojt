@@ -19,6 +19,7 @@ const ScheduleFormFields = ({
   onChange,
   movies,      // Active movies list
   rooms,       // Active rooms list
+  roomLocked = false, // Edit mode: room was fixed at creation and cannot be changed
 }) => {
   // Room already chosen (e.g. prefilled from clicking a room's row in the timeline)
   const selectedRoom = useMemo(
@@ -91,7 +92,7 @@ const ScheduleFormFields = ({
   const [formatFilteredRooms, setFormatFilteredRooms] = useState(null);
 
   useEffect(() => {
-    if (!formData.versionId) {
+    if (roomLocked || !formData.versionId) {
       setFormatFilteredRooms(null);
       return;
     }
@@ -106,18 +107,18 @@ const ScheduleFormFields = ({
     return () => {
       cancelled = true;
     };
-  }, [formData.versionId]);
+  }, [formData.versionId, roomLocked]);
 
   const roomOptions = formatFilteredRooms !== null ? formatFilteredRooms : rooms;
 
   useEffect(() => {
-    if (!formData.cinemaRoomId) return;
+    if (roomLocked || !formData.cinemaRoomId) return;
     const stillValid = roomOptions.some((r) => String(r.cinemaRoomId) === String(formData.cinemaRoomId));
     if (!stillValid) {
       onChange({ target: { name: "cinemaRoomId", value: "" } });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomOptions]);
+  }, [roomOptions, roomLocked]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 text-left">
@@ -127,7 +128,7 @@ const ScheduleFormFields = ({
           Phim <RequiredMark />
         </label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none">
             <Film size={15} />
           </span>
           <select
@@ -135,7 +136,7 @@ const ScheduleFormFields = ({
             value={formData.movieId}
             onChange={onChange}
             required
-            className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white"
+            className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white dark:bg-gray-800/60 dark:text-white"
           >
             <option value="">-- Chọn phim --</option>
             {movieOptions.map((m) => (
@@ -146,7 +147,7 @@ const ScheduleFormFields = ({
           </select>
         </div>
         {selectedMovie && (
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
             Thời lượng: {selectedMovie.duration} phút
           </p>
         )}
@@ -165,19 +166,19 @@ const ScheduleFormFields = ({
           </label>
           {selectedRoom && matchingVersions.length === 1 ? (
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none">
                 <Layers size={15} />
               </span>
               <input
                 type="text"
                 readOnly
                 value={`${matchingVersions[0].versionName} (tự động gán — phòng chỉ hỗ trợ định dạng này)`}
-                className="block w-full rounded-lg border border-gray-100 pl-10 pr-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                className="block w-full rounded-lg border border-gray-100 dark:border-gray-800 pl-10 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 cursor-not-allowed"
               />
             </div>
           ) : (
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none">
                 <Layers size={15} />
               </span>
               <select
@@ -185,7 +186,7 @@ const ScheduleFormFields = ({
                 value={formData.versionId}
                 onChange={onChange}
                 required
-                className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white"
+                className="block w-full rounded-lg border border-gray-200 dark:border-gray-700 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white dark:bg-gray-800/60 dark:text-white"
               >
                 <option value="">-- Chọn định dạng --</option>
                 {(selectedRoom ? matchingVersions : movieVersions).map((v) => (
@@ -211,29 +212,48 @@ const ScheduleFormFields = ({
         <label className={fieldLabelClass}>
           Phòng chiếu <RequiredMark />
         </label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-            <Monitor size={15} />
-          </span>
-          <select
-            name="cinemaRoomId"
-            value={formData.cinemaRoomId}
-            onChange={onChange}
-            required
-            className="block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white"
-          >
-            <option value="">-- Chọn phòng chiếu --</option>
-            {roomOptions.map((r) => (
-              <option key={r.cinemaRoomId} value={r.cinemaRoomId}>
-                {r.cinemaRoomName} (sức chứa: {r.seatQuantity ?? "?"})
-              </option>
-            ))}
-          </select>
-        </div>
-        {formData.versionId && roomOptions.length === 0 && (
-          <p className="text-xs text-amber-600 mt-1">
-            Không có phòng chiếu nào hỗ trợ định dạng đã chọn.
-          </p>
+        {roomLocked ? (
+          <>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] dark:text-white/40 pointer-events-none">
+                <Monitor size={15} />
+              </span>
+              <input
+                type="text"
+                readOnly
+                value={selectedRoom ? `${selectedRoom.cinemaRoomName} (sức chứa: ${selectedRoom.seatQuantity ?? "?"})` : ""}
+                className="block w-full rounded-lg border border-gray-100 dark:border-white/10 pl-10 pr-3 py-2 text-sm bg-gray-50 dark:bg-white/5 text-[#6B7280] dark:text-white/50 cursor-not-allowed"
+              />
+            </div>
+            <p className="text-xs text-[#9CA3AF] dark:text-white/40 mt-1">{SCHEDULE_LABELS.editRoomLockedHint}</p>
+          </>
+        ) : (
+          <>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] dark:text-white/40 pointer-events-none">
+                <Monitor size={15} />
+              </span>
+              <select
+                name="cinemaRoomId"
+                value={formData.cinemaRoomId}
+                onChange={onChange}
+                required
+                className="block w-full rounded-lg border border-gray-200 dark:border-white/10 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white dark:bg-[#10131A]/90"
+              >
+                <option value="">-- Chọn phòng chiếu --</option>
+                {roomOptions.map((r) => (
+                  <option key={r.cinemaRoomId} value={r.cinemaRoomId}>
+                    {r.cinemaRoomName} (sức chứa: {r.seatQuantity ?? "?"})
+                  </option>
+                ))}
+              </select>
+            </div>
+            {formData.versionId && roomOptions.length === 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-300 mt-1">
+                Không có phòng chiếu nào hỗ trợ định dạng đã chọn.
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -250,31 +270,31 @@ const ScheduleFormFields = ({
           max={maxScheduleDateTime()}
           className={fieldInputIconClass}
         />
-        <p className="text-xs text-gray-400 mt-1">Phải từ ngày mai, tối đa 10 ngày tới. Khung giờ cho phép: 08:00 – 23:00.</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Phải từ ngày mai, tối đa 10 ngày tới. Khung giờ cho phép: 08:00 – 23:00.</p>
       </div>
 
       {/* Giờ kết thúc dự kiến (readonly) */}
       <div>
         <label className={fieldLabelClass}>Giờ kết thúc dự kiến</label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none">
             <Clock size={15} />
           </span>
           <input
             type="text"
             readOnly
             value={estimatedEndTime || "— (chọn phim & giờ bắt đầu)"}
-            className="block w-full rounded-lg border border-gray-100 pl-10 pr-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+            className="block w-full rounded-lg border border-gray-100 dark:border-gray-800 pl-10 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 cursor-not-allowed"
           />
         </div>
-        <p className="text-xs text-gray-400 mt-1">Tính tự động = startTime + thời lượng phim.</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tính tự động = startTime + thời lượng phim.</p>
       </div>
 
       {/* Thời gian nghỉ giữa suất chiếu */}
       <div>
         <label className={fieldLabelClass}>Thời gian nghỉ giữa suất chiếu (dọn vệ sinh, phút)</label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none">
             <Clock size={15} />
           </span>
           <input
@@ -288,7 +308,7 @@ const ScheduleFormFields = ({
             className={fieldInputIconClass}
           />
         </div>
-        <p className="text-xs text-gray-400 mt-1">Khoảng trống giữa 2 suất chiếu (đã tính khi kiểm tra trùng giờ).</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Khoảng trống giữa 2 suất chiếu (đã tính khi kiểm tra trùng giờ).</p>
       </div>
     </div>
   );

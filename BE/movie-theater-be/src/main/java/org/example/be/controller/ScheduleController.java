@@ -57,32 +57,32 @@ public class ScheduleController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ApiResponse<ScheduleResponseDTO> addSchedule(@Valid @RequestBody ScheduleRequestDTO request) {
         return ApiResponse.success("Schedule added", scheduleService.addSchedule(request));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ApiResponse<ScheduleResponseDTO> updateSchedule(@PathVariable Integer id, @Valid @RequestBody ScheduleRequestDTO request) {
         return ApiResponse.success("Schedule updated", scheduleService.updateSchedule(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ApiResponse<Void> deleteSchedule(@PathVariable Integer id) {
         scheduleService.deleteSchedule(id);
         return ApiResponse.success("Schedule deleted", null);
     }
 
     @PostMapping("/auto-generate")
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ApiResponse<AutoGeneratePreviewDTO> autoGeneratePreview(@RequestBody AutoGenerateRequestDTO request) {
         return ApiResponse.success("Auto-generate preview", autoGenerateService.generatePreview(request));
     }
 
     @PostMapping("/auto-generate/confirm")
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ApiResponse<AutoGenerateConfirmResultDTO> autoGenerateConfirm(@RequestBody AutoGenerateConfirmRequestDTO request) {
         return ApiResponse.success("Auto-generate confirmed", autoGenerateService.confirm(request));
     }

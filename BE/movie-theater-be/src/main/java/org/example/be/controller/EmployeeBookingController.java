@@ -7,6 +7,7 @@ import org.example.be.dto.EmployeeConfirmBookingRequest;
 import org.example.be.dto.EmployeeSalesHistoryDTO;
 import org.example.be.service.BookingService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/employee/booking")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyAuthority('ROLE_Employee', 'ROLE_Admin', 'ROLE_SystemAdmin')")
 public class EmployeeBookingController {
 
     private final BookingService bookingService;

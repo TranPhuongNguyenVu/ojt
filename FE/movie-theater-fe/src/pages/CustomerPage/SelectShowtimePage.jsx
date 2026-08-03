@@ -314,23 +314,15 @@ const SelectShowtimePage = () => {
                     
                     {/* Các suất chiếu */}
                     <div className="flex flex-wrap gap-3">
-                      {group.slots.map((slot, sIdx) => {
-                        const isGolden = Number(slot.goldenHourExtra) > 0;
-                        return (
-                          <button
-                            key={sIdx}
-                            onClick={() => handleSelectShowtime(slot)}
-                            className="relative px-5 py-2.5 rounded border border-gray-200/80 dark:border-gray-700 bg-white dark:bg-gray-950 hover:border-[#E50914] hover:bg-[#E50914] hover:text-white transition-all font-bold text-xs md:text-sm text-gray-800 dark:text-gray-200 shadow-sm cursor-pointer transform active:scale-95"
-                          >
-                            {slot.time}
-                            {isGolden && (
-                              <span className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-amber-400 text-white text-[8px] font-black uppercase tracking-wide shadow-sm">
-                                +{Number(slot.goldenHourExtra).toLocaleString('vi-VN')}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
+                      {group.slots.map((slot, sIdx) => (
+                        <button
+                          key={sIdx}
+                          onClick={() => handleSelectShowtime(slot)}
+                          className="relative px-5 py-2.5 rounded border border-gray-200/80 dark:border-gray-700 bg-white dark:bg-gray-950 hover:border-[#E50914] hover:bg-[#E50914] hover:text-white transition-all font-bold text-xs md:text-sm text-gray-800 dark:text-gray-200 shadow-sm cursor-pointer transform active:scale-95"
+                        >
+                          {slot.time}
+                        </button>
+                      ))}
                     </div>
                   </div>
 

@@ -23,7 +23,7 @@ const CONTACT_INFO = [
   {
     icon: Mail,
     label: 'Email',
-    value: 'support@cinemanoir.vn',
+    value: 'support@cinemaelite.vn',
   },
   {
     icon: Clock,
@@ -91,7 +91,7 @@ const ContactPage = () => {
             Liên hệ với chúng tôi
           </h1>
           <p className="text-gray-400 dark:text-gray-500 text-sm md:text-base max-w-xl mx-auto">
-            Có câu hỏi về vé, suất chiếu hay ưu đãi? Hãy gửi tin nhắn — đội ngũ Cinema Noir luôn sẵn sàng hỗ trợ.
+            Có câu hỏi về vé, suất chiếu hay ưu đãi? Hãy gửi tin nhắn — đội ngũ Cinema Elite luôn sẵn sàng hỗ trợ.
           </p>
         </div>
 

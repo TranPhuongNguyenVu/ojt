@@ -1,12 +1,15 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { 
-  BarChart3, 
+import {
+  BarChart3,
   Film,
   History,
   UserCircle,
-  HelpCircle, 
+  HelpCircle,
   LogOut,
-  Home
+  Home,
+  QrCode,
+  LayoutDashboard,
+  Shield
 } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 
@@ -14,10 +17,15 @@ const EmployeeTemplate = () => {
   const user = JSON.parse(localStorage.getItem('USER_LOGIN') || '{}');
   const avatarUrl = user.image || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100&q=80";
   const fullName = user.fullName || "Chưa cập nhật";
-  const roleLabel = user.roleName === 'Employee' ? 'Nhân viên' : (user.roleName || 'Employee');
+  const roleName = user.roleName || user.role?.roleName || "";
+  const roleLabel = roleName === 'Employee' ? 'Nhân viên' : (roleName || 'Employee');
+  const normalizedRole = roleName.trim().toLowerCase();
 
   const mainNavItems = [
     { name: 'Thống kê', path: '/employee/statistics', icon: BarChart3 },
+    ...((normalizedRole === 'admin' || normalizedRole === 'systemadmin') ? [{ name: 'Trang Admin', path: '/admin/statistics', icon: LayoutDashboard }] : []),
+    ...(normalizedRole === 'systemadmin' ? [{ name: 'SysAdmin Hub', path: '/system-admin/admins', icon: Shield }] : []),
+    { name: 'Soát vé', path: '/employee/tickets/checkin', icon: QrCode },
     { name: 'Lịch sử bán vé', path: '/employee/tickets/history', icon: History },
     { name: 'Danh sách phim', path: '/employee/movies', icon: Film },
     { name: 'Hồ sơ của tôi', path: '/employee/profile', icon: UserCircle },
@@ -35,7 +43,7 @@ const EmployeeTemplate = () => {
       <div className="employee-glow employee-glow-b" aria-hidden="true" />
       <div className="employee-glow employee-glow-c" aria-hidden="true" />
 
-      <aside className="relative z-10 w-full bg-white/70 dark:bg-[#0a0a0f]/75 backdrop-blur-xl border-b border-gray-200/80 dark:border-white/10 flex flex-col gap-4 py-5 px-4 select-none shrink-0 lg:min-h-screen lg:w-64 lg:justify-between lg:border-b-0 lg:border-r lg:py-8 lg:pl-0 lg:pr-4 transition-colors duration-300">
+      <aside className="relative z-10 w-full bg-white/70 dark:bg-[#0a0a0f]/75 backdrop-blur-xl border-b border-gray-200/80 dark:border-white/10 flex flex-col gap-4 py-5 px-4 select-none shrink-0 lg:h-screen lg:overflow-y-auto lg:w-64 lg:justify-between lg:border-b-0 lg:border-r lg:py-8 lg:pl-0 lg:pr-4 transition-colors duration-300">
         <div className="space-y-4 lg:space-y-8 lg:pl-6">
           <div className="flex items-center justify-between gap-2">
             <h1 className="text-lg font-black tracking-wide text-gray-950 dark:text-white whitespace-nowrap">
@@ -97,7 +105,7 @@ const EmployeeTemplate = () => {
           })}
         </div>
 
-        <div className="hidden border-t border-gray-200/60 dark:border-white/10 pt-4 lg:flex lg:flex-col lg:space-y-1">
+        <div className="flex shrink-0 gap-1 overflow-x-auto border-t-0 pt-2 lg:overflow-visible lg:flex-col lg:space-y-1 lg:border-t lg:border-gray-200/60 lg:dark:border-white/10 lg:pt-4">
           {bottomNavItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -106,11 +114,11 @@ const EmployeeTemplate = () => {
                 to={item.path}
                 onClick={item.isSignOut ? () => localStorage.clear() : undefined}
                 className={({ isActive }) =>
-                  `flex items-center space-x-4 pl-6 py-3 text-xs font-black tracking-widest transition-colors ${
-                    item.isSignOut 
-                      ? 'text-gray-400 dark:text-white/40 hover:text-[#C00000] dark:hover:text-[#ff4d57]' 
-                      : isActive 
-                        ? 'text-[#C00000] dark:text-[#ff4d57]' 
+                  `flex shrink-0 items-center space-x-3 rounded-lg px-3 py-3 text-xs font-black tracking-widest transition-colors lg:space-x-4 lg:rounded-none lg:pl-6 ${
+                    item.isSignOut
+                      ? 'text-gray-400 dark:text-white/40 hover:text-[#C00000] dark:hover:text-[#ff4d57]'
+                      : isActive
+                        ? 'text-[#C00000] dark:text-[#ff4d57]'
                         : 'text-gray-400 dark:text-white/40 hover:text-gray-900 dark:hover:text-white'
                   }`
                 }

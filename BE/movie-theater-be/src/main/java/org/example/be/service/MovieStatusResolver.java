@@ -17,14 +17,14 @@ public class MovieStatusResolver {
     }
 
     public MovieStatus resolve(Movie movie) {
-        if (movie.getStatus() == MovieStatus.DELETED) {
-            return MovieStatus.DELETED;
+        if (movie.getStatus() == MovieStatus.INACTIVE) {
+            return MovieStatus.INACTIVE;
         }
 
         LocalDate fromDate = movie.getFromDate();
         LocalDate toDate = movie.getToDate();
         if (fromDate == null && toDate == null) {
-            return MovieStatus.INACTIVE;
+            return MovieStatus.UNSCHEDULED;
         }
 
         LocalDate today = LocalDate.now(clock);

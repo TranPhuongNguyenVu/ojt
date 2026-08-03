@@ -17,6 +17,7 @@ public class EmployeeBookingDetailDTO {
     private LocalDateTime showtime;
     private String seats;
     private List<SeatPriceDTO> seatPrices;
+    private List<ConcessionLineDTO> concessions;
     private Double totalMoney;
     private Integer ticketsConverted;
     private Integer useScore;

@@ -5,19 +5,29 @@ import org.example.be.dto.ConfirmPaymentRequest;
 import org.example.be.dto.SeatHoldResponseDTO;
 import org.example.be.dto.BookingHistoryResponseDTO;
 import org.example.be.dto.PointsHistoryResponseDTO;
+import org.example.be.dto.ConcessionLineDTO;
+import org.example.be.dto.ConcessionSelectionRequest;
 import org.example.be.dto.EmployeeConfirmBookingRequest;
 import org.example.be.dto.EmployeeBookingDetailDTO;
 import org.example.be.dto.EmployeeSalesHistoryDTO;
 import org.example.be.entity.*;
+import org.example.be.enums.ConcessionSize;
+import org.example.be.enums.ConcessionStatus;
+import org.example.be.enums.ConcessionType;
 import org.example.be.enums.ScheduleStatus;
+import org.example.be.enums.SeatStatus;
+import org.example.be.enums.TicketStatus;
+import org.example.be.event.InvoicePaidEvent;
 import org.example.be.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -67,6 +77,27 @@ public class BookingService {
     @Autowired
     private SeatRealtimeService seatRealtimeService;
 
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
+    @Autowired
+    private TicketService ticketService;
+
+    @Autowired
+    private TicketRepository ticketRepository;
+
+    @Autowired
+    private FoodRepository foodRepository;
+
+    @Autowired
+    private DrinkRepository drinkRepository;
+
+    @Autowired
+    private ComboRepository comboRepository;
+
+    @Autowired
+    private InvoiceConcessionRepository invoiceConcessionRepository;
+
     private static final int DRAFT_HOLD_MINUTES = 3;
 
     @Transactional
@@ -82,7 +113,7 @@ public class BookingService {
         java.util.Map<Integer, java.math.BigDecimal> seatPrices = pricingService.calculatePrices(schedule, physicalSeats);
 
         return physicalSeats.stream()
-                .filter(seat -> !Seat.STATUS_AISLE.equals(seat.getStatus()))
+                .filter(seat -> seat.getStatus() != SeatStatus.AISLE)
                 .map(seat -> {
                     Optional<ScheduleSeat> matched = bookedSeats.stream()
                             .filter(bs -> bs.getSeatId().equals(seat.getSeatId())
@@ -98,7 +129,8 @@ public class BookingService {
                             .seatColumn(seat.getSeatColumn())
                             .seatRow(seat.getSeatRow())
                             .seatType(seat.getSeatType())
-                            .status(seat.getStatus())
+                            .pairSeatId(seat.getPairSeatId())
+                            .status(seat.getStatus() != null ? seat.getStatus().name() : null)
                             .bookingStatus(bookingStatus)
                             .price(seatPrices.get(seat.getSeatId()))
                             .reservedAt(matched.map(ScheduleSeat::getReservedAt).orElse(null))
@@ -127,10 +159,25 @@ public class BookingService {
     }
 
     /**
+     * Ghế chỉ được giữ/đặt khi trạng thái vật lý là ACTIVE (không AISLE, không INACTIVE).
+     */
+    private void assertSeatsActive(List<Integer> seatIds) {
+        for (Integer seatId : seatIds) {
+            Seat seat = seatRepository.findById(seatId)
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy ghế ID: " + seatId));
+            if (seat.getStatus() != SeatStatus.ACTIVE) {
+                throw new IllegalStateException(
+                        "Ghế " + formatSeatLabel(seat) + " hiện không thể đặt.");
+            }
+        }
+    }
+
+    /**
      * Chỉ kiểm tra ghế còn bookable (trống hoặc DRAFT của chính mình).
      */
     private void assertSeatsBookable(Integer scheduleId, List<Integer> seatIds) {
         releaseExpiredHoldsForSchedule(scheduleId);
+        assertSeatsActive(seatIds);
         Account account = getLoggedInAccount();
         String accountId = account != null ? account.getAccountId() : null;
 
@@ -161,6 +208,7 @@ public class BookingService {
         if (seatIds == null || seatIds.isEmpty()) {
             throw new IllegalArgumentException("Danh sách ghế trống.");
         }
+        assertSeatsActive(seatIds);
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiredBefore = now.minusMinutes(DRAFT_HOLD_MINUTES);
@@ -415,6 +463,10 @@ public class BookingService {
 
         int addScore = member != null ? (int) (totalMoney * 0.05 / 1000) : 0;
 
+        List<InvoiceConcession> concessionLines = resolveConcessionLines(request.getConcessions());
+        BigDecimal concessionSubtotal = sumConcessionLines(concessionLines);
+        double finalTotalMoney = totalMoney + concessionSubtotal.doubleValue();
+
         String accountId = member != null && member.getAccount() != null
                 ? member.getAccount().getAccountId()
                 : null;
@@ -430,12 +482,14 @@ public class BookingService {
                 .soldByAccountId(soldByAccountId)
                 .scheduleId(scheduleId)
                 .bookingDate(LocalDateTime.now())
-                .totalMoney(totalMoney)
+                .totalMoney(finalTotalMoney)
                 .useScore(useScore)
                 .addScore(addScore)
                 .status(1)
                 .build();
         invoice = invoiceRepository.save(invoice);
+        saveConcessionLines(invoice.getInvoiceId(), concessionLines);
+        eventPublisher.publishEvent(new InvoicePaidEvent(invoice.getInvoiceId()));
 
         if (member != null) {
             int currentScore = member.getScore();
@@ -502,7 +556,7 @@ public class BookingService {
                 .invoiceId(invoice.getInvoiceId())
                 .txnRef("EMP-" + System.currentTimeMillis())
                 .paymentMethod("CASH")
-                .amount(totalMoney)
+                .amount(finalTotalMoney)
                 .paymentStatus("SUCCESS")
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -644,6 +698,7 @@ public class BookingService {
                 .showtime(schedule != null ? schedule.getStartTime() : null)
                 .seats(String.join(", ", seatLabels))
                 .seatPrices(seatPriceDTOs)
+                .concessions(getConcessionLinesForInvoice(invoice.getInvoiceId()))
                 .totalMoney(invoice.getTotalMoney())
                 .ticketsConverted(0)
                 .useScore(invoice.getUseScore())
@@ -688,19 +743,25 @@ public class BookingService {
         // 3. Tính điểm tích lũy mới (5% số tiền thực trả, quy ra điểm: 1 điểm = 1000đ)
         int addScore = (int) (request.getTotalMoney() * 0.05 / 1000);
 
+        List<InvoiceConcession> concessionLines = resolveConcessionLines(request.getConcessions());
+        BigDecimal concessionSubtotal = sumConcessionLines(concessionLines);
+        double finalTotalMoney = request.getTotalMoney() + concessionSubtotal.doubleValue();
+
         // 4. Tạo hóa đơn INVOICE
         Invoice invoice = Invoice.builder()
                 .accountId(account.getAccountId())
                 .scheduleId(request.getScheduleId())
                 .promotionId(request.getPromotionId())
                 .bookingDate(LocalDateTime.now())
-                .totalMoney(request.getTotalMoney())
+                .totalMoney(finalTotalMoney)
                 .useScore(request.getUseScore() != null ? request.getUseScore() : 0)
                 .addScore(addScore)
                 .status(1) // Đã thanh toán (thực tế trả tiền mặt tại quầy)
                 .build();
 
         invoice = invoiceRepository.save(invoice);
+        saveConcessionLines(invoice.getInvoiceId(), concessionLines);
+        eventPublisher.publishEvent(new InvoicePaidEvent(invoice.getInvoiceId()));
 
         // 5. Cập nhật điểm thành viên (Member) và ghi nhận biến động điểm (ScoreTransaction)
         if (member != null) {
@@ -787,7 +848,7 @@ public class BookingService {
                 .invoiceId(invoice.getInvoiceId())
                 .txnRef("CLX-" + System.currentTimeMillis())
                 .paymentMethod(request.getPaymentMethod())
-                .amount(request.getTotalMoney())
+                .amount(finalTotalMoney)
                 .paymentStatus("SUCCESS")
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -841,26 +902,55 @@ public class BookingService {
                     String roomName = room != null ? room.getCinemaRoomName() : "Phòng chiếu";
 
                     LocalDateTime showtime = schedule != null ? schedule.getStartTime() : LocalDateTime.now();
-                    String status = "completed";
-                    String statusText = "Đã xem";
+                    Optional<Ticket> ticketOpt = ticketRepository.findByInvoiceId(invoice.getInvoiceId());
+                    String ticketCode = ticketOpt.map(Ticket::getTicketCode).orElse(null);
+                    boolean emailSent = ticketOpt.map(t -> t.getEmailSentAt() != null).orElse(false);
+
+                    String status;
+                    String statusText;
                     if (invoice.getStatus() == 2) {
                         status = "canceled";
                         statusText = "Đã hủy";
                     } else if (invoice.getStatus() == 0) {
                         status = "pending";
                         statusText = "Chờ thanh toán";
-                    } else if (showtime.isAfter(LocalDateTime.now())) {
-                        status = "upcoming";
-                        statusText = "Sắp diễn ra";
+                    } else {
+                        // Dùng trạng thái check-in thực tế của vé (BOOKED/CHECKED_IN/EXPIRED)
+                        // thay vì chỉ so sánh giờ chiếu với hiện tại.
+                        TicketStatus ticketStatus = ticketOpt.map(Ticket::getStatus).orElse(TicketStatus.BOOKED);
+                        switch (ticketStatus) {
+                            case CHECKED_IN:
+                                status = "checked_in";
+                                statusText = "Đã check-in";
+                                break;
+                            case EXPIRED:
+                                status = "expired";
+                                statusText = "Đã quá hạn";
+                                break;
+                            case CANCELLED:
+                                status = "canceled";
+                                statusText = "Đã hủy";
+                                break;
+                            case BOOKED:
+                            default:
+                                status = "booked";
+                                statusText = "Đã đặt";
+                                break;
+                        }
                     }
 
                     return BookingHistoryResponseDTO.builder()
                             .invoiceId(invoice.getInvoiceId())
+                            .accountEmail(account.getEmail())
+                            .maskedEmail(org.example.be.util.PiiMaskUtil.maskEmail(account.getEmail()))
+                            .emailSent(emailSent)
+                            .ticketCode(ticketCode)
                             .movieTitle(movieTitle)
                             .moviePoster(moviePoster)
                             .datetime(showtime)
                             .seats(seatsLabel)
                             .cinema(roomName)
+                            .concessions(getConcessionLinesForInvoice(invoice.getInvoiceId()))
                             .totalMoney(invoice.getTotalMoney())
                             .status(status)
                             .statusText(statusText)
@@ -956,18 +1046,24 @@ public class BookingService {
         if (schedule != null && schedule.getStartTime().isBefore(LocalDateTime.now())) {
             throw new IllegalStateException("Không thể hủy vé của suất chiếu đã hoặc đang diễn ra.");
         }
-        
+
+        Account account = getLoggedInAccount();
+        int scoreRefunded = invoice.getUseScore() != null ? invoice.getUseScore() : 0;
+
+        // 0. Hủy TICKET (nếu có) một cách atomic; chặn hủy vé đã check-in / đã hủy
+        ticketService.cancelTicketForInvoice(invoiceId, "Cancelled by customer",
+                account != null ? account.getAccountId() : null, "member", scoreRefunded);
+
         // 1. Cập nhật trạng thái hóa đơn sang Đã hủy (2)
         invoice.setStatus(2);
         invoiceRepository.save(invoice);
-        
+
         // 2. Trả lại điểm thành viên nếu có sử dụng và trừ điểm tích lũy đã cộng
-        Account account = getLoggedInAccount();
         if (account != null) {
             Member member = memberRepository.findByAccountAccountId(account.getAccountId()).orElse(null);
             if (member != null) {
                 int currentScore = member.getScore();
-                
+
                 // Trả lại điểm đã dùng
                 if (invoice.getUseScore() != null && invoice.getUseScore() > 0) {
                     currentScore += invoice.getUseScore();
@@ -981,7 +1077,7 @@ public class BookingService {
                             .build();
                     scoreTransactionRepository.save(refundTx);
                 }
-                
+
                 // Thu hồi điểm đã tích lũy
                 if (invoice.getAddScore() != null && invoice.getAddScore() > 0) {
                     currentScore = Math.max(0, currentScore - invoice.getAddScore());
@@ -995,15 +1091,146 @@ public class BookingService {
                             .build();
                     scoreTransactionRepository.save(recallTx);
                 }
-                
+
                 member.setScore(currentScore);
                 memberRepository.save(member);
             }
         }
-        
+
         // 3. Mở khóa các ghế trong SCHEDULE_SEAT
         List<InvoiceSeat> invoiceSeats = invoiceSeatRepository.findByInvoiceId(invoiceId);
         unlockScheduleSeats(invoiceSeats);
+    }
+
+    private static final int MAX_CONCESSION_ITEM_QUANTITY = 10;
+    private static final int MAX_CONCESSION_TOTAL_QUANTITY = 20;
+
+    private List<InvoiceConcession> resolveConcessionLines(List<ConcessionSelectionRequest> selections) {
+        List<InvoiceConcession> lines = new ArrayList<>();
+        if (selections == null || selections.isEmpty()) {
+            return lines;
+        }
+
+        int totalQuantity = 0;
+        for (ConcessionSelectionRequest selection : selections) {
+            if (selection.getQuantity() == null || selection.getQuantity() <= 0) {
+                throw new IllegalArgumentException("Concession quantity must be positive.");
+            }
+            if (selection.getQuantity() > MAX_CONCESSION_ITEM_QUANTITY) {
+                throw new IllegalArgumentException(
+                        "Concession item quantity cannot exceed " + MAX_CONCESSION_ITEM_QUANTITY + ".");
+            }
+            totalQuantity += selection.getQuantity();
+            if (totalQuantity > MAX_CONCESSION_TOTAL_QUANTITY) {
+                throw new IllegalArgumentException(
+                        "Total concession quantity cannot exceed " + MAX_CONCESSION_TOTAL_QUANTITY + ".");
+            }
+            if (selection.getItemId() == null) {
+                throw new IllegalArgumentException("Concession item id is required.");
+            }
+
+            ConcessionType itemType = parseConcessionType(selection.getItemType());
+            ConcessionSize size = parseConcessionSize(selection.getSize());
+
+            String itemName;
+            BigDecimal unitPrice;
+            if (itemType == ConcessionType.FOOD) {
+                Food food = foodRepository.findById(selection.getItemId())
+                        .orElseThrow(() -> new IllegalArgumentException("Food not found: " + selection.getItemId()));
+                if (food.getStatus() != ConcessionStatus.ACTIVE) {
+                    throw new IllegalArgumentException("Food is not available: " + selection.getItemId());
+                }
+                itemName = food.getFoodName();
+                unitPrice = resolveConcessionPrice(food.getPrices(), size);
+            } else if (itemType == ConcessionType.DRINK) {
+                Drink drink = drinkRepository.findById(selection.getItemId())
+                        .orElseThrow(() -> new IllegalArgumentException("Drink not found: " + selection.getItemId()));
+                if (drink.getStatus() != ConcessionStatus.ACTIVE) {
+                    throw new IllegalArgumentException("Drink is not available: " + selection.getItemId());
+                }
+                itemName = drink.getDrinkName();
+                unitPrice = resolveConcessionPrice(drink.getPrices(), size);
+            } else {
+                Combo combo = comboRepository.findById(selection.getItemId())
+                        .orElseThrow(() -> new IllegalArgumentException("Combo not found: " + selection.getItemId()));
+                if (combo.getStatus() != ConcessionStatus.ACTIVE) {
+                    throw new IllegalArgumentException("Combo is not available: " + selection.getItemId());
+                }
+                itemName = combo.getComboName();
+                unitPrice = resolveConcessionPrice(combo.getPrices(), size);
+            }
+
+            BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(selection.getQuantity()));
+            lines.add(InvoiceConcession.builder()
+                    .itemType(itemType)
+                    .itemId(selection.getItemId())
+                    .itemName(itemName)
+                    .size(size)
+                    .unitPrice(unitPrice)
+                    .quantity(selection.getQuantity())
+                    .lineTotal(lineTotal)
+                    .build());
+        }
+        return lines;
+    }
+
+    private ConcessionType parseConcessionType(String raw) {
+        if (raw == null) {
+            throw new IllegalArgumentException("Concession item type is required.");
+        }
+        try {
+            return ConcessionType.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid concession item type: " + raw);
+        }
+    }
+
+    private ConcessionSize parseConcessionSize(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return ConcessionSize.NONE;
+        }
+        try {
+            return ConcessionSize.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid concession size: " + raw);
+        }
+    }
+
+    private BigDecimal resolveConcessionPrice(List<ConcessionPrice> prices, ConcessionSize size) {
+        if (prices == null) {
+            throw new IllegalArgumentException("This item has no price configured.");
+        }
+        return prices.stream()
+                .filter(p -> p.getSize() == size)
+                .map(ConcessionPrice::getPrice)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("This item does not offer size " + size + "."));
+    }
+
+    private BigDecimal sumConcessionLines(List<InvoiceConcession> lines) {
+        return lines.stream().map(InvoiceConcession::getLineTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void saveConcessionLines(Integer invoiceId, List<InvoiceConcession> lines) {
+        if (lines.isEmpty()) {
+            return;
+        }
+        for (InvoiceConcession line : lines) {
+            line.setInvoiceId(invoiceId);
+        }
+        invoiceConcessionRepository.saveAll(lines);
+    }
+
+    private List<ConcessionLineDTO> getConcessionLinesForInvoice(Integer invoiceId) {
+        return invoiceConcessionRepository.findByInvoiceId(invoiceId).stream()
+                .map(line -> ConcessionLineDTO.builder()
+                        .itemName(line.getItemName())
+                        .size(line.getSize().name())
+                        .unitPrice(line.getUnitPrice())
+                        .quantity(line.getQuantity())
+                        .lineTotal(line.getLineTotal())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -1033,19 +1260,24 @@ public class BookingService {
 
         int addScore = (int) (request.getTotalMoney() * 0.05 / 1000);
 
+        List<InvoiceConcession> concessionLines = resolveConcessionLines(request.getConcessions());
+        BigDecimal concessionSubtotal = sumConcessionLines(concessionLines);
+        double finalTotalMoney = request.getTotalMoney() + concessionSubtotal.doubleValue();
+
         // 3. Tạo hóa đơn INVOICE ở trạng thái PENDING (0)
         Invoice invoice = Invoice.builder()
                 .accountId(account.getAccountId())
                 .scheduleId(request.getScheduleId())
                 .promotionId(request.getPromotionId())
                 .bookingDate(LocalDateTime.now())
-                .totalMoney(request.getTotalMoney())
+                .totalMoney(finalTotalMoney)
                 .useScore(request.getUseScore() != null ? request.getUseScore() : 0)
                 .addScore(addScore)
                 .status(0) // Trạng thái Chờ thanh toán
                 .build();
 
         invoice = invoiceRepository.save(invoice);
+        saveConcessionLines(invoice.getInvoiceId(), concessionLines);
 
         // 4. Khóa ghế tạm thời (DRAFT) và tạo INVOICE_SEAT
         Schedule schedule = scheduleRepository.findById(request.getScheduleId())
@@ -1100,6 +1332,7 @@ public class BookingService {
         // 1. Cập nhật hóa đơn thành Đã thanh toán (1)
         invoice.setStatus(1);
         invoiceRepository.save(invoice);
+        eventPublisher.publishEvent(new InvoicePaidEvent(invoice.getInvoiceId()));
 
         // 2. Ghi nhận giao dịch thanh toán
         Payment payment = Payment.builder()
@@ -1181,6 +1414,111 @@ public class BookingService {
                 .invoiceId(invoice.getInvoiceId())
                 .txnRef("MOMO-FAIL-" + System.currentTimeMillis())
                 .paymentMethod("MOMO")
+                .amount(invoice.getTotalMoney())
+                .paymentStatus("FAILED")
+                .createdAt(LocalDateTime.now())
+                .build();
+        paymentRepository.save(payment);
+
+        // 3. Mở khóa ghế
+        List<InvoiceSeat> invoiceSeats = invoiceSeatRepository.findByInvoiceId(invoiceId);
+        unlockScheduleSeats(invoiceSeats);
+    }
+
+    @Transactional
+    public void completeVnPayPayment(Integer invoiceId, String txnRef, Double amount) {
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy hóa đơn ID: " + invoiceId));
+
+        if (invoice.getStatus() == 1) {
+            return; // Đã xử lý thanh toán thành công trước đó (tránh trùng lặp)
+        }
+
+        // 1. Cập nhật hóa đơn thành Đã thanh toán (1)
+        invoice.setStatus(1);
+        invoiceRepository.save(invoice);
+        eventPublisher.publishEvent(new InvoicePaidEvent(invoice.getInvoiceId()));
+
+        // 2. Ghi nhận giao dịch thanh toán
+        Payment payment = Payment.builder()
+                .invoiceId(invoice.getInvoiceId())
+                .txnRef(txnRef)
+                .paymentMethod("VNPAY")
+                .amount(amount)
+                .paymentStatus("SUCCESS")
+                .createdAt(LocalDateTime.now())
+                .build();
+        paymentRepository.save(payment);
+
+        // 3. Cộng trừ điểm thành viên
+        Member member = memberRepository.findByAccountAccountId(invoice.getAccountId()).orElse(null);
+        if (member != null) {
+            int currentScore = member.getScore();
+            int useScore = invoice.getUseScore();
+            if (useScore > 0) {
+                currentScore -= useScore;
+                ScoreTransaction subTx = ScoreTransaction.builder()
+                        .memberId(member.getMemberId())
+                        .invoiceId(invoice.getInvoiceId())
+                        .txnType("SUB")
+                        .points(useScore)
+                        .balanceAfter((double) currentScore)
+                        .txnDate(LocalDateTime.now())
+                        .build();
+                scoreTransactionRepository.save(subTx);
+            }
+            int addScore = invoice.getAddScore();
+            if (addScore > 0) {
+                currentScore += addScore;
+                ScoreTransaction addTx = ScoreTransaction.builder()
+                        .memberId(member.getMemberId())
+                        .invoiceId(invoice.getInvoiceId())
+                        .txnType("ADD")
+                        .points(addScore)
+                        .balanceAfter((double) currentScore)
+                        .txnDate(LocalDateTime.now())
+                        .build();
+                scoreTransactionRepository.save(addTx);
+            }
+            member.setScore(currentScore);
+            memberRepository.save(member);
+        }
+
+        // 4. Chuyển ghế DRAFT → BOOKED
+        List<InvoiceSeat> invoiceSeats = invoiceSeatRepository.findByInvoiceId(invoiceId);
+        List<Integer> seatIds = new ArrayList<>();
+        Integer scheduleId = invoice.getScheduleId();
+        for (InvoiceSeat is : invoiceSeats) {
+            ScheduleSeat ss = scheduleSeatRepository.findById(is.getScheduleSeatId()).orElse(null);
+            if (ss != null) {
+                ss.setSeatStatus(ScheduleSeat.STATUS_BOOKED);
+                scheduleSeatRepository.save(ss);
+                seatIds.add(ss.getSeatId());
+            }
+        }
+        if (!seatIds.isEmpty()) {
+            seatRealtimeService.broadcastSeatStatus(scheduleId, seatIds, ScheduleSeat.STATUS_BOOKED);
+        }
+    }
+
+    @Transactional
+    public void failVnPayPayment(Integer invoiceId) {
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy hóa đơn ID: " + invoiceId));
+
+        if (invoice.getStatus() != 0) {
+            return; // Chỉ xử lý nếu hóa đơn đang ở trạng thái PENDING
+        }
+
+        // 1. Cập nhật trạng thái hóa đơn thành Hủy/Thất bại (2)
+        invoice.setStatus(2);
+        invoiceRepository.save(invoice);
+
+        // 2. Ghi nhận giao dịch thanh toán thất bại
+        Payment payment = Payment.builder()
+                .invoiceId(invoice.getInvoiceId())
+                .txnRef("VNPAY-FAIL-" + System.currentTimeMillis())
+                .paymentMethod("VNPAY")
                 .amount(invoice.getTotalMoney())
                 .paymentStatus("FAILED")
                 .createdAt(LocalDateTime.now())

@@ -44,19 +44,19 @@ export const CONCESSION_SERVICE_BY_TYPE = {
 };
 
 export const fieldInputClass =
-  "block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm";
+  "block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm";
 
 export const fieldInputIconClass =
-  "block w-full rounded-lg border border-gray-200 pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm";
+  "block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm";
 
 export const fieldTextareaClass =
-  "block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm resize-none";
+  "block w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm resize-none";
 
 export const fieldSelectClass =
-  "block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white";
+  "block w-full rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all shadow-sm bg-white dark:bg-gray-800/60 dark:text-white";
 
 export const fieldLabelClass =
-  "block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1";
+  "block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1";
 
 export const getApiErrorMessage = (error, fallback) =>
   error?.response?.data?.message || error?.message || fallback;
@@ -70,9 +70,9 @@ export const mapConcessionApiError = (error, fallback) => {
 };
 
 export const getConcessionStatusBadge = (status) => {
-  if (status === "INACTIVE") return { label: CONCESSION_LABELS.statusInactive, cls: "bg-gray-100 text-gray-500" };
-  if (status === "DELETED") return { label: CONCESSION_LABELS.statusDeleted, cls: "bg-red-100 text-red-500" };
-  return { label: CONCESSION_LABELS.statusActive, cls: "bg-green-100 text-green-700" };
+  if (status === "INACTIVE") return { label: CONCESSION_LABELS.statusInactive, cls: "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400" };
+  if (status === "DELETED") return { label: CONCESSION_LABELS.statusDeleted, cls: "bg-red-100 dark:bg-red-950/40 text-red-500 dark:text-red-300" };
+  return { label: CONCESSION_LABELS.statusActive, cls: "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300" };
 };
 
 export const formatVnd = (value) =>
@@ -89,22 +89,37 @@ export const formatPriceSummary = (prices) => {
 
 const EMPTY_PRICE_STATE = { NONE: "", S: "", M: "", L: "" };
 
-export const emptyConcessionForm = () => ({
+export const emptyConcessionForm = (itemType) => ({
   name: "",
   description: "",
   image: "",
   status: "ACTIVE",
-  enabledSizes: [],
+  enabledSizes: itemType === "combo" ? ["NONE"] : [],
   priceBySize: { ...EMPTY_PRICE_STATE },
+  comboFoodItems: [],
+  comboDrinkItems: [],
 });
 
 export const toConcessionFormState = (itemType, item) => {
   const priceBySize = { ...EMPTY_PRICE_STATE };
-  const enabledSizes = [];
-  (item.prices || []).forEach((p) => {
-    priceBySize[p.size] = p.price != null ? String(p.price) : "";
-    enabledSizes.push(p.size);
-  });
+  let enabledSizes = [];
+  if (itemType === "combo") {
+    // Combo pricing is always a single flat price (no size concept for the combo itself).
+    const noneEntry = (item.prices || []).find((p) => p.size === "NONE") || (item.prices || [])[0];
+    priceBySize.NONE = noneEntry?.price != null ? String(noneEntry.price) : "";
+    enabledSizes = ["NONE"];
+  } else {
+    (item.prices || []).forEach((p) => {
+      priceBySize[p.size] = p.price != null ? String(p.price) : "";
+      enabledSizes.push(p.size);
+    });
+  }
+  const comboFoodItems = (item.items || [])
+    .filter((i) => i.foodId != null)
+    .map((i) => ({ foodId: i.foodId, size: i.size, quantity: i.quantity }));
+  const comboDrinkItems = (item.items || [])
+    .filter((i) => i.drinkId != null)
+    .map((i) => ({ drinkId: i.drinkId, size: i.size, quantity: i.quantity }));
   return {
     name: item[ITEM_TYPE_META[itemType].nameKey] || "",
     description: item.description || "",
@@ -112,6 +127,8 @@ export const toConcessionFormState = (itemType, item) => {
     status: item.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     enabledSizes,
     priceBySize,
+    comboFoodItems,
+    comboDrinkItems,
   };
 };
 
@@ -121,11 +138,18 @@ export const buildConcessionPayload = (itemType, formData) => {
     size,
     price: Number(formData.priceBySize[size]),
   }));
-  return {
+  const payload = {
     [nameKey]: formData.name?.trim() || null,
     description: formData.description?.trim() || null,
     image: formData.image?.trim() || null,
     status: formData.status,
     prices,
   };
+  if (itemType === "combo") {
+    payload.items = [
+      ...(formData.comboFoodItems || []).map((i) => ({ foodId: i.foodId, size: i.size, quantity: i.quantity })),
+      ...(formData.comboDrinkItems || []).map((i) => ({ drinkId: i.drinkId, size: i.size, quantity: i.quantity })),
+    ];
+  }
+  return payload;
 };

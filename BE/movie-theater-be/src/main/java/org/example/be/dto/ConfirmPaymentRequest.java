@@ -15,4 +15,5 @@ public class ConfirmPaymentRequest {
     private Integer useScore;
     private Double totalMoney;
     private String paymentMethod; // "MOMO" or "CASH"
+    private List<ConcessionSelectionRequest> concessions;
 }

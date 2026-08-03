@@ -25,6 +25,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class MemberService {
 
+    private static final int ACCOUNT_STATUS_ACTIVE = 1;
+
     private final MemberRepository memberRepository;
     private final MemberMapper memberMapper; // Gọi cái máy Mapper ra
     private final AccountRepository accountRepository;
@@ -47,6 +49,10 @@ public class MemberService {
         Account account = member.getAccount();
         if (account == null || account.getRole() == null || account.getRole().getRoleId() != 2) {
             return null;
+        }
+        if (account.getStatus() == null || account.getStatus() != ACCOUNT_STATUS_ACTIVE) {
+            throw new IllegalArgumentException(
+                    "Tài khoản thành viên này hiện không hoạt động, không thể gắn vào giao dịch mới.");
         }
         return memberMapper.toDTO(member);
     }
@@ -81,8 +87,9 @@ public class MemberService {
             if (account.getRole() == null || account.getRole().getRoleId() != 2) {
                 throw new IllegalArgumentException("Chỉ thao tác được trên tài khoản thành viên.");
             }
-            memberRepository.delete(member);
-            accountRepository.delete(account);
+            // Xóa mềm tài khoản thành viên (status = 3: Soft Deleted)
+            account.setStatus(3);
+            accountRepository.save(account);
         }
     }
 

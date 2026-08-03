@@ -16,4 +16,5 @@ public class ComboDTO {
     private String image;
     private String status;
     private List<ConcessionPriceDTO> prices;
+    private List<ComboItemDTO> items;
 }

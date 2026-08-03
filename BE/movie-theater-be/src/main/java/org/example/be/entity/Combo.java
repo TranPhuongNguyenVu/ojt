@@ -34,4 +34,7 @@ public class Combo {
 
     @OneToMany(mappedBy = "combo")
     private List<ConcessionPrice> prices;
+
+    @OneToMany(mappedBy = "combo")
+    private List<ComboItem> items;
 }

@@ -15,6 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/members")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin', 'ROLE_Employee')")
 public class MemberController {
 
     private final MemberService memberService;

@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/employee/dashboard")
-@PreAuthorize("hasAnyAuthority('ROLE_Employee', 'ROLE_Admin')")
+@PreAuthorize("hasAnyAuthority('ROLE_Employee', 'ROLE_Admin', 'ROLE_SystemAdmin')")
 public class EmployeeDashboardController {
     private final EmployeeDashboardService employeeDashboardService;
 

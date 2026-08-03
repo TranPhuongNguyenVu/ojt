@@ -7,6 +7,7 @@ import org.example.be.entity.ConcessionPrice;
 import org.example.be.entity.Drink;
 import org.example.be.enums.ConcessionStatus;
 import org.example.be.mapper.DrinkMapper;
+import org.example.be.repository.ComboItemRepository;
 import org.example.be.repository.ConcessionPriceRepository;
 import org.example.be.repository.DrinkRepository;
 import org.example.be.util.TextNormalizeUtil;
@@ -28,6 +29,8 @@ public class DrinkService {
     private DrinkRepository drinkRepository;
     @Autowired
     private ConcessionPriceRepository concessionPriceRepository;
+    @Autowired
+    private ComboItemRepository comboItemRepository;
     @Autowired
     private DrinkMapper drinkMapper;
 
@@ -100,6 +103,10 @@ public class DrinkService {
         Drink drink = findOrThrow(id);
         if (drink.getStatus() == ConcessionStatus.DELETED) {
             throw new EntityNotFoundException("Drink not found");
+        }
+        if (comboItemRepository.existsByDrink_DrinkIdAndCombo_StatusNot(id, ConcessionStatus.DELETED)) {
+            throw new IllegalStateException(
+                    "Không thể xóa nước uống đang thuộc một combo. Vui lòng xóa combo đó trước.");
         }
         drink.setStatus(ConcessionStatus.DELETED);
         return drinkMapper.toDTO(drinkRepository.save(drink));

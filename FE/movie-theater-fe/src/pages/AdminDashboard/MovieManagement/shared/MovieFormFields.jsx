@@ -8,6 +8,7 @@ import {
   Image,
   Upload,
   Loader2,
+  ZoomIn,
 } from "lucide-react";
 import {
   fieldInputClass,
@@ -17,6 +18,7 @@ import {
 } from "./movieFormConstants";
 import MovieService from "../../../../services/MovieService";
 import DateInput from "../../../../components/DateInput";
+import ImageLightbox from "../../../../components/ImageLightbox";
 
 const RequiredMark = () => <span className="text-red-500 ml-0.5">*</span>;
 
@@ -28,7 +30,7 @@ const Field = ({ label, required, icon: Icon, colSpan = false, children }) => (
     </label>
     {Icon ? (
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none">
           <Icon size={15} />
         </span>
         {React.cloneElement(children, {
@@ -45,6 +47,7 @@ const ImageUploadField = ({ label, fieldName, value, onChange, required = false 
   const fileRef = useRef();
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [zoomOpen, setZoomOpen] = useState(false);
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -53,7 +56,7 @@ const ImageUploadField = ({ label, fieldName, value, onChange, required = false 
     setUploadError("");
     try {
       const res = await MovieService.uploadImage(file);
-      const url = res.data?.url || res.data;
+      const url = res.data?.data;
       onChange({ target: { name: fieldName, value: url } });
     } catch {
       setUploadError("Upload thất bại, vui lòng thử lại.");
@@ -82,7 +85,7 @@ const ImageUploadField = ({ label, fieldName, value, onChange, required = false 
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 transition-colors disabled:opacity-60"
+            className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-60"
           >
             {uploading ? (
               <Loader2 size={14} className="animate-spin" />
@@ -103,7 +106,12 @@ const ImageUploadField = ({ label, fieldName, value, onChange, required = false 
           <p className="text-xs text-red-500">{uploadError}</p>
         )}
         {value && (
-          <div className="w-24 h-16 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 shrink-0">
+          <button
+            type="button"
+            onClick={() => setZoomOpen(true)}
+            className="group relative w-24 h-16 rounded-lg overflow-hidden border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 shrink-0"
+            title="Xem ảnh lớn"
+          >
             <img
               src={value}
               alt="preview"
@@ -112,9 +120,16 @@ const ImageUploadField = ({ label, fieldName, value, onChange, required = false 
                 e.currentTarget.style.display = "none";
               }}
             />
-          </div>
+            <span className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
+              <ZoomIn
+                size={18}
+                className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
+              />
+            </span>
+          </button>
         )}
       </div>
+      <ImageLightbox src={zoomOpen ? value : null} onClose={() => setZoomOpen(false)} />
     </div>
   );
 };
@@ -147,7 +162,7 @@ const CheckboxGroup = ({ label, options, selectedIds, idKey, labelKey, onChange,
         )}
       </div>
       {options.length === 0 ? (
-        <p className="text-xs text-gray-400 italic">
+        <p className="text-xs text-gray-400 dark:text-gray-500 italic">
           Chưa có dữ liệu — sẽ hiển thị sau khi có ít nhất 1 phim được gán.
         </p>
       ) : (
@@ -162,7 +177,7 @@ const CheckboxGroup = ({ label, options, selectedIds, idKey, labelKey, onChange,
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold cursor-pointer select-none transition-all ${
                   checked
                     ? "bg-[#C00000] text-white border-[#C00000]"
-                    : "bg-white text-gray-600 border-gray-300 hover:border-[#C00000] hover:text-[#C00000]"
+                    : "bg-white dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:border-[#C00000] hover:text-[#C00000]"
                 }`}
               >
                 <input
@@ -187,7 +202,7 @@ const MovieFormFields = ({ formData, onChange, onTypeChange, onVersionChange, ty
     <div>
       <label className={fieldLabelClass}>Tên phim (Tiếng Việt) <span className="text-red-500">*</span></label>
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"><Film size={15} /></span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none"><Film size={15} /></span>
         <input
           type="text"
           name="movieNameVn"
@@ -205,7 +220,7 @@ const MovieFormFields = ({ formData, onChange, onTypeChange, onVersionChange, ty
     <div>
       <label className={fieldLabelClass}>Tên phim (Tiếng Anh) <span className="text-red-500">*</span></label>
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"><Film size={15} /></span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none"><Film size={15} /></span>
         <input
           type="text"
           name="movieNameEnglish"
@@ -223,7 +238,7 @@ const MovieFormFields = ({ formData, onChange, onTypeChange, onVersionChange, ty
     <div>
       <label className={fieldLabelClass}>Đạo diễn</label>
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"><User size={15} /></span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none"><User size={15} /></span>
         <input
           type="text"
           name="director"
@@ -240,7 +255,7 @@ const MovieFormFields = ({ formData, onChange, onTypeChange, onVersionChange, ty
     <div>
       <label className={fieldLabelClass}>Diễn viên</label>
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"><User size={15} /></span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none"><User size={15} /></span>
         <input
           type="text"
           name="actor"
@@ -257,7 +272,7 @@ const MovieFormFields = ({ formData, onChange, onTypeChange, onVersionChange, ty
     <div>
       <label className={fieldLabelClass}>Nhà sản xuất</label>
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"><User size={15} /></span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none"><User size={15} /></span>
         <input
           type="text"
           name="movieProductionCompany"
@@ -274,7 +289,7 @@ const MovieFormFields = ({ formData, onChange, onTypeChange, onVersionChange, ty
     <div>
       <label className={fieldLabelClass}>Thời lượng (phút) <span className="text-red-500">*</span></label>
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"><Clock size={15} /></span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none"><Clock size={15} /></span>
         <input
           type="number"
           name="duration"
@@ -292,7 +307,7 @@ const MovieFormFields = ({ formData, onChange, onTypeChange, onVersionChange, ty
     <div className="md:col-span-2">
       <label className={fieldLabelClass}>Trailer (URL YouTube) <span className="text-red-500">*</span></label>
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"><Link size={15} /></span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none"><Link size={15} /></span>
         <input
           type="url"
           name="trailer"

@@ -72,7 +72,7 @@ const EditMovieModal = ({ movie, onClose, onSuccess, typeOptions, versionOptions
       <form onSubmit={handleSubmit} noValidate className="flex flex-col overflow-hidden flex-1">
         <div className="p-6 space-y-4 overflow-y-auto flex-1">
           {errorMessage && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300">
               {errorMessage}
             </div>
           )}

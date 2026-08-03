@@ -149,20 +149,20 @@ const OtpVerificationPage = () => {
       className="w-full min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat relative px-4 py-12 font-sans"
       style={{ backgroundImage: `url(${bgHero})` }}
     >
-      <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"></div>
+      <div className="absolute inset-0 bg-gray-900/40 dark:bg-black/70 backdrop-blur-sm"></div>
 
-      <div className="relative z-10 w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 md:p-10 flex flex-col items-center">
-        
+      <div className="relative z-10 w-full max-w-md bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-8 md:p-10 flex flex-col items-center">
+
         {/* Icon Bảo mật */}
-        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6">
-          <ShieldCheck size={32} className="text-[#C00000]" strokeWidth={2} />
+        <div className="w-16 h-16 bg-red-50 dark:bg-red-950/40 rounded-full flex items-center justify-center mb-6">
+          <ShieldCheck size={32} className="text-[#C00000] dark:text-[#E50914]" strokeWidth={2} />
         </div>
 
         <div className="text-center space-y-3 mb-8 w-full">
-          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Xác thực Email</h2>
-          <p className="text-gray-500 text-sm leading-relaxed font-medium">
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Xác thực Email</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed font-medium">
             Chúng tôi vừa gửi một mã OTP gồm 6 chữ số đến email: <br/>
-            <span className="text-[#C00000] font-bold">{email}</span>
+            <span className="text-[#C00000] dark:text-[#E50914] font-bold">{email}</span>
           </p>
         </div>
 
@@ -179,8 +179,8 @@ const OtpVerificationPage = () => {
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               disabled={timeLeft === 0 || isVerifying || isOtpVerified}
-              className={`w-12 h-14 md:w-14 md:h-16 text-center text-2xl font-black text-gray-800 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all
-                ${digit ? 'border-[#C00000] ring-[#C00000]/20' : 'border-gray-200 focus:ring-[#C00000]/50 focus:border-[#C00000]'}
+              className={`w-12 h-14 md:w-14 md:h-16 text-center text-2xl font-black text-gray-800 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border rounded-xl focus:outline-none focus:ring-2 focus:bg-white dark:focus:bg-gray-800 transition-all
+                ${digit ? 'border-[#C00000] dark:border-[#E50914] ring-[#C00000]/20 dark:ring-[#E50914]/20' : 'border-gray-200 dark:border-gray-700 focus:ring-[#C00000]/50 dark:focus:ring-[#E50914]/50 focus:border-[#C00000] dark:focus:border-[#E50914]'}
               `}
             />
           ))}
@@ -190,23 +190,23 @@ const OtpVerificationPage = () => {
         {requirePasswordChange && isOtpVerified && (
           <div className="w-full space-y-4 mb-6 transition-all duration-300">
             <div className="space-y-1.5 text-left w-full">
-              <label className="text-[10px] font-black tracking-widest text-gray-400 uppercase block">MẬT KHẨU MỚI</label>
+              <label className="text-[10px] font-black tracking-widest text-gray-400 dark:text-gray-500 uppercase block">MẬT KHẨU MỚI</label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => { setNewPassword(e.target.value); setErrorMessage(""); }}
                 placeholder="Nhập mật khẩu mới..."
-                className="w-full bg-gray-50 text-sm text-gray-800 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 transition-all placeholder-gray-300"
+                className="w-full bg-gray-50 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-500 transition-all placeholder-gray-300 dark:placeholder-gray-500"
               />
             </div>
             <div className="space-y-1.5 text-left w-full">
-              <label className="text-[10px] font-black tracking-widest text-gray-400 uppercase block">XÁC NHẬN MẬT KHẨU MỚI</label>
+              <label className="text-[10px] font-black tracking-widest text-gray-400 dark:text-gray-500 uppercase block">XÁC NHẬN MẬT KHẨU MỚI</label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => { setConfirmPassword(e.target.value); setErrorMessage(""); }}
                 placeholder="Nhập lại mật khẩu mới..."
-                className="w-full bg-gray-50 text-sm text-gray-800 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 transition-all placeholder-gray-300"
+                className="w-full bg-gray-50 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-500 transition-all placeholder-gray-300 dark:placeholder-gray-500"
               />
             </div>
           </div>
@@ -214,7 +214,7 @@ const OtpVerificationPage = () => {
 
         {/* Khối hiển thị Lỗi */}
         {errorMessage && (
-          <div className="w-full flex items-center p-3 mb-6 text-[13px] font-semibold text-[#C00000] bg-red-50 border border-red-100 rounded-xl">
+          <div className="w-full flex items-center p-3 mb-6 text-[13px] font-semibold text-[#C00000] dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 rounded-xl">
             <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
             {errorMessage}
           </div>
@@ -222,38 +222,38 @@ const OtpVerificationPage = () => {
 
         {/* Khối Đồng hồ đếm ngược */}
         <div className="flex items-center justify-center w-full mb-8">
-          <span className={`font-mono text-xl font-bold tracking-widest ${timeLeft > 60 ? 'text-gray-700' : 'text-[#C00000] animate-pulse'}`}>
+          <span className={`font-mono text-xl font-bold tracking-widest ${timeLeft > 60 ? 'text-gray-700 dark:text-gray-300' : 'text-[#C00000] dark:text-[#E50914] animate-pulse'}`}>
             {formatTime(timeLeft)}
           </span>
         </div>
 
         {/* Nút Xác nhận */}
-        <button 
+        <button
           onClick={handleVerify}
           disabled={timeLeft === 0 || isVerifying}
           className={`w-full font-bold text-sm py-4 rounded-xl transition-all shadow-lg uppercase tracking-wider
-            ${(timeLeft === 0 || isVerifying) 
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' 
-              : 'bg-[#C00000] text-white hover:bg-[#a00000] active:scale-[0.99] shadow-red-900/20'
+            ${(timeLeft === 0 || isVerifying)
+              ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed shadow-none'
+              : 'bg-[#C00000] dark:bg-[#E50914] text-white hover:bg-[#a00000] dark:hover:bg-[#ff1a25] active:scale-[0.99] shadow-red-900/20'
             }`}
         >
-          {isVerifying 
-            ? 'Đang xử lý...' 
-            : (requirePasswordChange && isOtpVerified) 
-              ? 'Đặt mật khẩu mới' 
+          {isVerifying
+            ? 'Đang xử lý...'
+            : (requirePasswordChange && isOtpVerified)
+              ? 'Đặt mật khẩu mới'
               : 'Xác nhận mã OTP'
           }
         </button>
 
         {/* Chân trang: Nút Quay lại & Gửi lại mã */}
         <div className="w-full flex justify-between items-center mt-8 text-sm font-semibold">
-          <button onClick={() => navigate('/register')} className="flex items-center text-gray-400 hover:text-gray-700 transition-colors">
+          <button onClick={() => navigate('/register')} className="flex items-center text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
             <ArrowLeft size={16} className="mr-1" /> Quay lại
           </button>
-          
-          <button 
-            disabled={timeLeft > 0} 
-            className={`flex items-center transition-colors ${timeLeft > 0 ? 'text-gray-300 cursor-not-allowed' : 'text-[#C00000] hover:underline'}`}
+
+          <button
+            disabled={timeLeft > 0}
+            className={`flex items-center transition-colors ${timeLeft > 0 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-[#C00000] dark:text-[#E50914] hover:underline'}`}
           >
             <RefreshCw size={14} className="mr-1.5" /> Gửi lại mã
           </button>

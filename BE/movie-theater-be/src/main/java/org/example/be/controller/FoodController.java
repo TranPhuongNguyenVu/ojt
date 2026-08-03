@@ -36,31 +36,31 @@ public class FoodController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ApiResponse<FoodDTO> createFood(@Valid @RequestBody FoodRequestDTO requestDTO) {
         return ApiResponse.success("Food created", foodService.create(requestDTO));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ApiResponse<FoodDTO> updateFood(@PathVariable Integer id, @Valid @RequestBody FoodRequestDTO requestDTO) {
         return ApiResponse.success("Food updated", foodService.update(id, requestDTO));
     }
 
     @PatchMapping("/{id}/activate")
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ApiResponse<FoodDTO> activateFood(@PathVariable Integer id) {
         return ApiResponse.success("Food restored", foodService.activate(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ApiResponse<FoodDTO> deleteFood(@PathVariable Integer id) {
         return ApiResponse.success("Food deleted", foodService.delete(id));
     }
 
     private boolean isAdmin(Authentication auth) {
         return auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_Admin"));
+                .anyMatch(a -> a.getAuthority().equals("ROLE_Admin") || a.getAuthority().equals("ROLE_SystemAdmin"));
     }
 }

@@ -56,7 +56,7 @@ public class CinemaRoomController {
 
     // AC-02: Tạo phòng chiếu mới kèm seat map
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_Admin')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ResponseEntity<ApiResponse<CinemaRoomDetailDTO>> createCinemaRoom(
             @Valid @RequestBody CreateCinemaRoomRequest request) {
         CinemaRoomDetailDTO created = cinemaRoomService.createCinemaRoom(request);
@@ -68,6 +68,7 @@ public class CinemaRoomController {
     // AC-05: Cập nhật thông tin cơ bản phòng chiếu (tên + formats)
     // KHÔNG đụng đến seat map / capacity
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ResponseEntity<ApiResponse<CinemaRoomDTO>> updateCinemaRoomInfo(
             @PathVariable Integer id,
             @Valid @RequestBody UpdateCinemaRoomRequest request) {
@@ -78,6 +79,7 @@ public class CinemaRoomController {
 
     // AC-06: Ngừng hoạt động (mềm) phòng chiếu (status = INACTIVE)
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ResponseEntity<ApiResponse<Void>> deactivateCinemaRoom(@PathVariable Integer id) {
         cinemaRoomService.deactivate(id);
         return ResponseEntity.ok(ApiResponse.success("Ngừng hoạt động phòng chiếu thành công", null));
@@ -85,6 +87,7 @@ public class CinemaRoomController {
 
     // Kích hoạt lại phòng chiếu đã ngừng hoạt động
     @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ResponseEntity<ApiResponse<CinemaRoomDTO>> activateCinemaRoom(@PathVariable Integer id) {
         return ResponseEntity.ok(
                 ApiResponse.success("Kích hoạt phòng chiếu thành công", cinemaRoomService.activate(id))
@@ -103,6 +106,7 @@ public class CinemaRoomController {
 
     // Cập nhật loại ghế / trạng thái ghế cho các ghế đã chọn
     @PutMapping("/{id}/seats")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ResponseEntity<ApiResponse<String>> updateSeatTypes(
             @PathVariable Integer id,
             @Valid @RequestBody UpdateSeatTypeRequest request) {
@@ -114,6 +118,7 @@ public class CinemaRoomController {
     // AC-NEW: Tái tạo sơ đồ ghế (rows × columns, capacity tự tính)
     // Validate: không thu nhỏ nếu còn booking active
     @PutMapping("/{id}/recreate-seats")
+    @PreAuthorize("hasAnyAuthority('ROLE_Admin', 'ROLE_SystemAdmin')")
     public ResponseEntity<ApiResponse<CinemaRoomDetailDTO>> recreateSeatMap(
             @PathVariable Integer id,
             @Valid @RequestBody RecreateSeatMapRequest request) {

@@ -49,7 +49,7 @@ public class MomoPaymentController {
             // 1. Tạo hóa đơn PENDING ở cơ sở dữ liệu và khóa ghế tạm thời
             Invoice invoice = bookingService.createInvoicePending(request);
             Integer invoiceId = invoice.getInvoiceId();
-            long amount = Math.round(request.getTotalMoney());
+            long amount = Math.round(invoice.getTotalMoney());
 
             // 2. Thiết lập orderId và requestId duy nhất của giao dịch MoMo
             String orderId = "INV-" + invoiceId + "-" + System.currentTimeMillis();
