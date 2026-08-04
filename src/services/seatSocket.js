@@ -1,6 +1,16 @@
 import { Client } from '@stomp/stompjs';
 
-const WS_URL = 'ws://localhost:8080/ws-seats';
+const getWsUrl = () => {
+  if (import.meta.env.VITE_WS_URL) {
+    return import.meta.env.VITE_WS_URL;
+  }
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    return 'ws://localhost:8080/ws-seats';
+  }
+  return 'wss://cinemapromaxbe-epfzgtawb0g9bjdj.centralindia-01.azurewebsites.net/ws-seats';
+};
+
+const WS_URL = getWsUrl();
 
 /**
  * Subscribe realtime seat status for a schedule.
