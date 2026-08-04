@@ -71,7 +71,7 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "http://localhost:5173",
                 "http://localhost:4173",
-                "https://*.azurewebsites.net"
+                "https://cinemapromax-aff5g0ceggasdvas.centralindia-01.azurewebsites.net"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
@@ -83,10 +83,10 @@ public class SecurityConfig {
         return source;
     }
 
-    @Bean
-    public CorsFilter corsFilter() {
-        return new CorsFilter(corsConfigurationSource());
-    }
+    // @Bean
+    // public CorsFilter corsFilter() {
+    //     return new CorsFilter(corsConfigurationSource());
+    // }
 
     @Bean
     public org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
