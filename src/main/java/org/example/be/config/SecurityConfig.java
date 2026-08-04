@@ -29,6 +29,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        // Cho phép tất cả preflight OPTIONS requests
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+
                         // 1. THẢ CỬA TỰ DO: Ai cũng vào được để Đăng nhập, Đăng ký, Quên mật khẩu
                         .requestMatchers("/api/auth/**").permitAll()
 
