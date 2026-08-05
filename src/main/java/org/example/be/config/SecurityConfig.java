@@ -71,7 +71,8 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "http://localhost:5173",
                 "http://localhost:4173",
-                "https://cinemapromax-aff5g0ceggasdvas.centralindia-01.azurewebsites.net"
+                "https://cinemapromax-aff5g0ceggasdvas.centralindia-01.azurewebsites.net",
+                "https://ojt-git-fe-tranphuongnguyenvus-projects.vercel.app"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
