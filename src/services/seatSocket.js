@@ -7,6 +7,9 @@ const getWsUrl = () => {
   if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
     return 'ws://localhost:8080/ws-seats';
   }
+  if (window.location.hostname === "ojt-f8jy.onrender.com") {
+    return 'wss://ojt-f8jy.onrender.com/ws-seats';
+  }
   return 'wss://cinemapromaxbe-epfzgtawb0g9bjdj.centralindia-01.azurewebsites.net/ws-seats';
 };
 
