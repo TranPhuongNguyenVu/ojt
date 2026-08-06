@@ -1,6 +1,6 @@
 import axios from "axios";
 const AuthService = axios.create({
-  baseURL: "http://localhost:8080/api/",
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   // DÒNG NÀY LÀ LINH HỒN CỦA TÍNH NĂNG: Ép Trình duyệt kẹp Cookie gửi đi!
   withCredentials: true,
 });

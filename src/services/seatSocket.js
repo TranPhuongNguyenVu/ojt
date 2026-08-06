@@ -1,6 +1,6 @@
 import { Client } from '@stomp/stompjs';
 
-const WS_URL = 'ws://localhost:8080/ws-seats';
+const WS_URL = import.meta.env.VITE_WS_BASE_URL;
 
 /**
  * Subscribe realtime seat status for a schedule.
