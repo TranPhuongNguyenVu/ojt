@@ -1,0 +1,629 @@
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  BarChart3,
+  CalendarDays,
+  ChevronDown,
+  Clapperboard,
+  Download,
+  DollarSign,
+  FileSpreadsheet,
+  FileText,
+  Percent,
+  Printer,
+  RefreshCw,
+  Ticket,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import DashboardService from "../../services/DashboardService";
+import {
+  buildReportMeta,
+  exportDashboardToExcel,
+  exportDashboardToPdf,
+  formatReportMoney,
+  formatReportNumber,
+  formatReportPercent,
+  getAdminAccountName,
+  getRevenueByMovieRows,
+} from "../../utils/dashboardReportExport";
+
+const TIME_FILTERS = [
+  { value: "TODAY", label: "Hôm nay" },
+  { value: "THIS_WEEK", label: "Tuần này" },
+  { value: "THIS_MONTH", label: "Tháng này" },
+  { value: "THIS_QUARTER", label: "Quý này" },
+  { value: "THIS_YEAR", label: "Năm nay" },
+  { value: "CUSTOM", label: "Tùy chỉnh" },
+];
+
+const emptyOverview = {
+  kpis: {},
+  revenueTrend: [],
+  revenueByMovie: [],
+  ticketSalesByTimeSlot: [],
+  topRevenueMovies: [],
+  operational: {},
+};
+
+const money = (value) =>
+  new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
+
+const number = (value) => new Intl.NumberFormat("vi-VN").format(Number(value || 0));
+
+const percent = (value) => `${Number(value || 0).toFixed(2)}%`;
+const TIME_SLOT_LABEL = {
+    "Sáng": "(05:00 - 11:59)",
+    "Chiều": "(12:00 - 16:59)",
+    "Tối": "(17:00 - 20:59)",
+    "Đêm": "(21:00 - 04:59)",
+};
+
+const unwrap = (response) => response.data?.data ?? response.data;
+
+const buildParams = (filters) => {
+  const params = {
+    timeFilter: filters.timeFilter,
+    movieId: filters.movieId || undefined,
+  };
+
+  if (filters.timeFilter === "CUSTOM") {
+    params.startDate = filters.startDate || undefined;
+    params.endDate = filters.endDate || undefined;
+  }
+
+  return params;
+};
+
+const exceedsOneYear = (filters) => {
+  if (filters.timeFilter !== "CUSTOM" || !filters.startDate || !filters.endDate) {
+    return false;
+  }
+
+  const start = new Date(filters.startDate);
+  const end = new Date(filters.endDate);
+  const days = (end - start) / (1000 * 60 * 60 * 24) + 1;
+
+  return days > 366;
+};
+
+const StatCard = ({ icon: Icon, label, value, tone }) => (
+  <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">{label}</p>
+        <p className="mt-2 text-2xl font-black text-gray-950 dark:text-white">{value}</p>
+      </div>
+      <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${tone}`}>
+        <Icon size={21} strokeWidth={2.3} />
+      </div>
+    </div>
+  </div>
+);
+
+const RevenueLine = ({ data }) => {
+  const points = useMemo(() => {
+    if (!data.length) return "";
+    const max = Math.max(...data.map((item) => Number(item.revenue || 0)), 1);
+    return data
+      .map((item, index) => {
+        const x = data.length === 1 ? 300 : (index / (data.length - 1)) * 600;
+        const y = 190 - (Number(item.revenue || 0) / max) * 160;
+        return `${x},${y}`;
+      })
+      .join(" ");
+  }, [data]);
+
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-base font-black text-gray-950 dark:text-white">Revenue Trend</h2>
+        <BarChart3 size={19} className="text-[#C00000] dark:text-red-400" />
+      </div>
+      <div className="h-64">
+        {data.length ? (
+          <>
+            <svg viewBox="0 0 600 210" className="h-52 w-full overflow-visible">
+              <polyline
+                fill="none"
+                stroke="#C00000"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="4"
+                points={points}
+              />
+              {points.split(" ").map((point) => {
+                const [cx, cy] = point.split(",");
+                return <circle key={point} cx={cx} cy={cy} r="4.5" fill="#C00000" />;
+              })}
+            </svg>
+            <div className="grid grid-cols-3 gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 sm:grid-cols-5">
+              {data.slice(0, 5).map((item) => (
+                <span key={item.label} className="truncate">
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm font-semibold text-gray-400 dark:text-gray-500">
+            No revenue data
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const MovieDistribution = ({ data }) => {
+  const colors = ["#C00000", "#111827", "#F59E0B", "#2563EB", "#16A34A", "#9333EA"];
+  const total = data.reduce((sum, item) => sum + Number(item.totalRevenue || 0), 0);
+  let cursor = 0;
+  const gradient = data.length
+    ? data
+        .map((item, index) => {
+          const start = cursor;
+          const slice = total ? (Number(item.totalRevenue || 0) / total) * 100 : 0;
+          cursor += slice;
+          return `${colors[index % colors.length]} ${start}% ${cursor}%`;
+        })
+        .join(", ")
+    : "#E5E7EB 0% 100%";
+
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+      <h2 className="text-base font-black text-gray-950 dark:text-white">Doanh thu theo phim</h2>
+      <div className="mt-5 grid gap-5 md:grid-cols-[180px_1fr]">
+        <div
+          className="mx-auto h-44 w-44 rounded-full border border-gray-200 dark:border-gray-700"
+          style={{ background: `conic-gradient(${gradient})` }}
+          aria-label="Revenue distribution pie chart"
+        />
+        <div className="space-y-3">
+          {data.length ? (
+            data.slice(0, 6).map((item, index) => (
+              <div key={item.movieId || item.movieName} className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-full"
+                    style={{ backgroundColor: colors[index % colors.length] }}
+                  />
+                  <span className="truncate text-sm font-bold text-gray-700 dark:text-gray-300">{item.movieName}</span>
+                </div>
+                <span className="shrink-0 text-sm font-black text-gray-950 dark:text-white">{money(item.totalRevenue)}</span>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm font-semibold text-gray-400 dark:text-gray-500">Chưa có dữ liệu doanh thu theo phim</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TimeSlotBars = ({ data }) => {
+  const max = Math.max(...data.map((item) => Number(item.ticketsSold || 0)), 1);
+
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+      <h2 className="text-base font-black text-gray-950 dark:text-white">Vé bán theo khung giờ</h2>
+      <div className="mt-5 space-y-4">
+        {data.length ? (
+          data.map((item) => (
+            <div key={item.timeSlot}>
+              <div className="mb-1 flex items-center justify-between text-sm">
+                <span className="font-bold text-gray-700 dark:text-gray-300">{item.timeSlot}</span>
+                <span className="font-black text-gray-950 dark:text-white">{number(item.ticketsSold)}</span>
+              </div>
+              <div className="h-3 rounded-full bg-gray-100 dark:bg-gray-800">
+                <div
+                  className="h-3 rounded-full bg-[#C00000]"
+                  style={{ width: `${Math.max((Number(item.ticketsSold || 0) / max) * 100, 4)}%` }}
+                />
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm font-semibold text-gray-400 dark:text-gray-500">Chưa có dữ liệu khung giờ</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const PrintReportTables = ({ overview }) => {
+  const kpis = overview.kpis || {};
+  const revenueByMovie = getRevenueByMovieRows(overview);
+
+  return (
+    <div className="hidden print:block">
+      <section className="mt-6">
+        <h2 className="text-base font-black text-gray-950">Tổng quan:</h2>
+        <table className="mt-2 w-full border-collapse text-sm">
+          <tbody>
+            <tr><td className="border border-gray-400 px-2 py-1 font-semibold text-gray-900">Tổng doanh thu</td><td className="border border-gray-400 px-2 py-1 font-semibold text-gray-900">{formatReportMoney(kpis.totalRevenue)}</td></tr>
+            <tr><td className="border border-gray-400 px-2 py-1 font-semibold text-gray-900">Tỷ lệ lấp đầy trung bình</td><td className="border border-gray-400 px-2 py-1 font-semibold text-gray-900">{formatReportPercent(kpis.averageOccupancyRate)}</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section className="mt-6">
+        <h2 className="text-base font-black text-gray-950">Doanh thu theo phim</h2>
+        <table className="mt-2 w-full border-collapse text-sm">
+          <thead><tr><th className="border border-gray-400 bg-gray-100 px-2 py-1 text-left font-bold text-gray-900">Phim</th><th className="border border-gray-400 px-2 py-1 font-semibold text-gray-900 text-left">Doanh thu</th><th className="border border-gray-400 px-2 py-1 font-semibold text-gray-900 text-left">Tỷ trọng doanh thu</th></tr></thead>
+          <tbody>
+            {revenueByMovie.map((item) => (
+              <tr key={item.movieId || item.movieName}><td className="border border-gray-400 px-2 py-1 font-semibold text-gray-900">{item.movieName}</td><td className="border border-gray-400 px-2 py-1 font-semibold text-gray-900">{formatReportMoney(item.totalRevenue)}</td><td className="border border-gray-400 px-2 py-1 font-semibold text-gray-900">{formatReportPercent(item.revenuePercentage)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="mt-6">
+        <h2 className="text-base font-black text-gray-950">Vé bán theo khung giờ</h2>
+        <table className="mt-2 w-full border-collapse text-sm">
+          <thead><tr><th className="border border-gray-400 bg-gray-100 px-2 py-1 text-left font-bold text-gray-900">Khung giờ</th><th className="border border-gray-400 px-2 py-1 font-semibold text-gray-900 text-left">Vé đã bán</th></tr></thead>
+          <tbody>
+            {(overview.ticketSalesByTimeSlot || []).map((item) => (
+              <tr key={item.timeSlot}><td className="border border-gray-400 px-2 py-1 font-semibold text-gray-900">{item.timeSlot}</td><td className="border border-gray-400 px-2 py-1 font-semibold text-gray-900">{formatReportNumber(item.ticketsSold)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="mt-6">
+        <h2 className="text-base font-black text-gray-950">Top 5 phim có doanh thu cao nhất</h2>
+        <table className="mt-2 w-full border-collapse text-sm">
+          <thead><tr><th className="border border-gray-400 bg-gray-100 px-2 py-1 text-left font-bold text-gray-900">Phim</th><th className="border border-gray-400 px-2 py-1 font-semibold text-gray-900 text-left">Vé đã bán</th><th className="border border-gray-400 px-2 py-1 font-semibold text-gray-900 text-left">Tổng doanh thu</th><th className="border border-gray-400 px-2 py-1 font-semibold text-gray-900 text-left">Tỷ lệ lấp đầy trung bình</th></tr></thead>
+          <tbody>
+            {(overview.topRevenueMovies || []).map((item) => (
+              <tr key={item.movieId || item.movieName}><td className="border border-gray-400 px-2 py-1 font-semibold text-gray-900">{item.movieName}</td><td className="border border-gray-400 px-2 py-1 font-semibold text-gray-900">{formatReportNumber(item.ticketsSold)}</td><td className="border border-gray-400 px-2 py-1 font-semibold text-gray-900">{formatReportMoney(item.totalRevenue)}</td><td className="border border-gray-400 px-2 py-1 font-semibold text-gray-900">{formatReportPercent(item.averageOccupancyRate)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+    </div>
+  );
+};
+
+const MainDashboard = () => {
+  const [filters, setFilters] = useState({
+    timeFilter: "THIS_MONTH",
+    movieId: "",
+    startDate: "",
+    endDate: "",
+  });
+  const [movies, setMovies] = useState([]);
+  const [overview, setOverview] = useState(emptyOverview);
+  const [loading, setLoading] = useState(true);
+  const [refreshingOperational, setRefreshingOperational] = useState(false);
+  const [refreshingDashboard, setRefreshingDashboard] = useState(false);
+  const [exporting, setExporting] = useState("");
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [error, setError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [reportGeneratedAt, setReportGeneratedAt] = useState(new Date());
+
+  const fetchOverview = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await DashboardService.getOverview(buildParams(filters));
+      const data = unwrap(response) || emptyOverview;
+      setOverview({ ...emptyOverview, ...data });
+      setLastUpdated(new Date());
+    } catch (err) {
+      setError(err.response?.data?.message || "Không thể tải dữ liệu bảng điều khiển.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchOperational = async () => {
+    setRefreshingOperational(true);
+    try {
+      const response = await DashboardService.getOperational();
+      const operational = unwrap(response) || {};
+      setOverview((current) => ({ ...current, operational }));
+      setLastUpdated(new Date());
+    } catch (err) {
+      setError(err.response?.data?.message || "Không thể làm mới số liệu vận hành.");
+    } finally {
+      setRefreshingOperational(false);
+    }
+  };
+
+  const refreshDashboard = async () => {
+    setRefreshingDashboard(true);
+    setError("");
+    try {
+      const response = await DashboardService.getOverview(buildParams(filters));
+      const data = unwrap(response) || emptyOverview;
+      setOverview({ ...emptyOverview, ...data });
+      setLastUpdated(new Date());
+    } catch (err) {
+      setError(err.response?.data?.message || "Không thể làm mới dữ liệu bảng điều khiển.");
+    } finally {
+      setRefreshingDashboard(false);
+    }
+  };
+
+  useEffect(() => {
+    DashboardService.getMovies()
+      .then((response) => setMovies(unwrap(response) || []))
+      .catch(() => setMovies([]));
+  }, []);
+
+  useEffect(() => {
+    fetchOverview();
+  }, [filters.timeFilter, filters.movieId, filters.startDate, filters.endDate]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(fetchOperational, 5 * 60 * 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const kpis = overview.kpis || {};
+  const operational = overview.operational || {};
+  const canUseCustom = filters.timeFilter === "CUSTOM";
+  const adminName = getAdminAccountName();
+  const reportMeta = useMemo(
+    () => buildReportMeta({ filters, movies, generatedAt: reportGeneratedAt, adminName }),
+    [filters, movies, reportGeneratedAt, adminName],
+  );
+
+  const loadFreshOverviewForReport = async () => {
+    if (exceedsOneYear(filters)) {
+      throw new Error("Khoảng thời gian báo cáo không được vượt quá một năm.");
+    }
+
+    const response = await DashboardService.getOverview(buildParams(filters));
+    const data = unwrap(response) || emptyOverview;
+    const nextOverview = { ...emptyOverview, ...data };
+    const generatedAt = new Date();
+
+    setOverview(nextOverview);
+    setLastUpdated(generatedAt);
+    setReportGeneratedAt(generatedAt);
+
+    return {
+      overview: nextOverview,
+      meta: buildReportMeta({ filters, movies, generatedAt, adminName }),
+    };
+  };
+
+  const handleExport = async (type) => {
+    setExportMenuOpen(false);
+    setExporting(type);
+    setError("");
+    try {
+      const report = await loadFreshOverviewForReport();
+      if (type === "excel") {
+        exportDashboardToExcel(report.overview, report.meta);
+      } else {
+        exportDashboardToPdf(report.overview, report.meta);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Không thể xuất báo cáo.");
+    } finally {
+      setExporting("");
+    }
+  };
+
+  const handlePrint = async () => {
+    setExporting("print");
+    setError("");
+    try {
+      await loadFreshOverviewForReport();
+      window.setTimeout(() => window.print(), 100);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Không thể in báo cáo.");
+    } finally {
+      window.setTimeout(() => setExporting(""), 200);
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-6 print:max-w-none print:space-y-4">
+      <div className="hidden print:block">
+        <h1 className="text-2xl font-black text-gray-950">{reportMeta.title}</h1>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+          <p className="font-semibold text-gray-900"><span className="font-bold">Khoảng thời gian:</span> {reportMeta.period}</p>
+          <p className="font-semibold text-gray-900"><span className="font-bold">Phim đã chọn:</span> {reportMeta.selectedMovie}</p>
+          <p className="font-semibold text-gray-900"><span className="font-bold">Ngày xuất báo cáo:</span> {reportMeta.generatedDate}</p>
+          <p className="font-semibold text-gray-900"><span className="font-bold">Giờ xuất báo cáo:</span> {reportMeta.generatedTime}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between print:hidden">
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest text-[#C00000] dark:text-red-400">Thống kê quản trị</p>
+          <h1 className="mt-2 text-3xl font-black text-gray-950 dark:text-white">Bảng điều khiển</h1>
+          <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+            {lastUpdated ? `Cập nhật lúc ${lastUpdated.toLocaleTimeString("vi-VN")}` : "Đang tải dữ liệu"}
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:w-[760px]">
+          <select
+            value={filters.timeFilter}
+            onChange={(event) => setFilters((current) => ({ ...current, timeFilter: event.target.value }))}
+            className="h-11 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/60 px-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-[#C00000]"
+          >
+            {TIME_FILTERS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.movieId}
+            onChange={(event) => setFilters((current) => ({ ...current, movieId: event.target.value }))}
+            className="h-11 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/60 px-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-[#C00000]"
+          >
+            <option value="">Tất cả phim</option>
+            {movies.map((movie) => (
+              <option key={movie.movieId} value={movie.movieId}>
+                {movie.movieName}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="date"
+            disabled={!canUseCustom}
+            value={filters.startDate}
+            onChange={(event) => setFilters((current) => ({ ...current, startDate: event.target.value }))}
+            className="h-11 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/60 px-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-[#C00000] disabled:bg-gray-100 dark:disabled:bg-gray-900 disabled:text-gray-400 dark:disabled:text-gray-600 dark:[color-scheme:dark]"
+          />
+
+          <input
+            type="date"
+            disabled={!canUseCustom}
+            value={filters.endDate}
+            onChange={(event) => setFilters((current) => ({ ...current, endDate: event.target.value }))}
+            className="h-11 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/60 px-3 text-sm font-bold text-gray-800 dark:text-white outline-none focus:border-[#C00000] disabled:bg-gray-100 dark:disabled:bg-gray-900 disabled:text-gray-400 dark:disabled:text-gray-600 dark:[color-scheme:dark]"
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap justify-end gap-3 print:hidden">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setExportMenuOpen((current) => !current)}
+            disabled={Boolean(exporting)}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 text-sm font-black text-gray-800 dark:text-white shadow-sm transition hover:bg-gray-50 dark:hover:bg-gray-800/60 disabled:cursor-wait disabled:text-gray-400 dark:disabled:text-gray-600"
+          >
+            <Download size={16} />
+            {exporting === "excel" || exporting === "pdf" ? "Đang xuất..." : "Xuất báo cáo"}
+            <ChevronDown size={15} />
+          </button>
+          {exportMenuOpen && (
+            <div className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-1 shadow-lg">
+              <button
+                type="button"
+                onClick={() => handleExport("excel")}
+                className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <FileSpreadsheet size={16} className="text-green-600 dark:text-green-400" />
+                Xuất Excel (.xlsx)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport("pdf")}
+                className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <FileText size={16} className="text-[#C00000] dark:text-red-400" />
+                Xuất PDF (.pdf)
+              </button>
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={handlePrint}
+          disabled={Boolean(exporting)}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#C00000] px-4 text-sm font-black text-white shadow-sm transition hover:bg-red-700 disabled:cursor-wait disabled:bg-gray-300 dark:disabled:bg-gray-700"
+        >
+          <Printer size={16} />
+          {exporting === "print" ? "Đang chuẩn bị..." : "In báo cáo"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm font-bold text-red-700 dark:text-red-300">
+          {error}
+        </div>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 print:hidden">
+        <StatCard icon={DollarSign} label="Tổng doanh thu" value={money(kpis.totalRevenue)} tone="bg-red-50 dark:bg-red-950/40 text-[#C00000] dark:text-red-300" />
+        <StatCard icon={Percent} label="Tỷ lệ lấp đầy" value={percent(kpis.averageOccupancyRate)} tone="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400" />
+      </div>
+
+      <div className="hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm print:hidden">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-black text-gray-950 dark:text-white">Operational</h2>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Auto refreshes every 5 minutes</p>
+          </div>
+          <button
+            type="button"
+            onClick={refreshDashboard}
+            disabled={refreshingDashboard}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#C00000] px-4 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-wait disabled:bg-gray-300 dark:disabled:bg-gray-700"
+          >
+            <RefreshCw size={16} className={refreshingDashboard ? "animate-spin" : ""} />
+            Refresh Now
+          </button>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard icon={CalendarDays} label="Active Showtimes" value={number(operational.activeShowtimes)} tone="bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400" />
+          <StatCard icon={Users} label="Today's Tickets" value={number(operational.ticketsSoldToday)} tone="bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400" />
+          <StatCard icon={DollarSign} label="Today's Revenue" value={money(operational.todayRevenue)} tone="bg-red-50 dark:bg-red-950/40 text-[#C00000] dark:text-red-300" />
+        </div>
+      </div>
+
+      <div className={loading ? "pointer-events-none opacity-60 print:hidden" : "space-y-6 print:hidden"}>
+        <div className="grid gap-6"><TimeSlotBars data={overview.ticketSalesByTimeSlot || []} /></div>
+
+        <div className="grid gap-6 xl:grid-cols-[1fr_1.15fr]">
+          <MovieDistribution data={overview.revenueByMovie || []} />
+
+          <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-black text-gray-950 dark:text-white">Phim có doanh thu cao nhất</h2>
+              <Clapperboard size={19} className="text-[#C00000] dark:text-red-400" />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[620px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-800 text-xs font-black uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                    <th className="py-3 pr-4">Phim</th>
+                    <th className="py-3 pr-4">Doanh thu</th>
+                    <th className="py-3 pr-4">Vé bán</th>
+                    <th className="py-3">Tỷ lệ lấp đầy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(overview.topRevenueMovies || []).map((movie) => (
+                    <tr key={movie.movieId || movie.movieName} className="border-b border-gray-100 dark:border-gray-800">
+                      <td className="py-3 pr-4 font-bold text-gray-800 dark:text-gray-200">{movie.movieName}</td>
+                      <td className="py-3 pr-4 font-black text-gray-950 dark:text-white">{money(movie.totalRevenue)}</td>
+                      <td className="py-3 pr-4 font-semibold text-gray-600 dark:text-gray-400">{number(movie.ticketsSold)}</td>
+                      <td className="py-3 font-semibold text-gray-600 dark:text-gray-400">{percent(movie.averageOccupancyRate)}</td>
+                    </tr>
+                  ))}
+                  {!overview.topRevenueMovies?.length && (
+                    <tr>
+                      <td colSpan="4" className="py-8 text-center font-semibold text-gray-400 dark:text-gray-500">
+                        No movie ranking data
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <PrintReportTables overview={overview} />
+
+      <div className="hidden border-t pt-3 text-xs font-bold text-gray-900 print:block">
+        Admin Account Name: {reportMeta.adminName} | Report Export Date: {reportMeta.generatedDate} | Report Export Time: {reportMeta.generatedTime}
+      </div>
+    </div>
+  );
+};
+
+export default MainDashboard;
