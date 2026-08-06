@@ -59,7 +59,11 @@ const EmployeeTicketCheckInPage = () => {
       return undefined;
     }
 
-    const scanner = new Html5QrcodeScanner(SCANNER_ELEMENT_ID, { fps: 10, qrbox: 250 }, false);
+    const scanner = new Html5QrcodeScanner(
+      SCANNER_ELEMENT_ID,
+      { fps: 10, experimentalFeatures: { useBarCodeDetectorIfSupported: true } },
+      false
+    );
     scanner.render(
       (decodedText) => {
         if (decodedText === lastScannedRef.current) return;
